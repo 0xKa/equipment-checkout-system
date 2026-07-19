@@ -37,6 +37,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	healthHandler := handlers.NewHealth()
 	server := echo.New()
+	server.Logger = logger.AsSlog(log)
 	routes.Register(server, healthHandler)
 
 	address := cfg.HTTPAddress()
