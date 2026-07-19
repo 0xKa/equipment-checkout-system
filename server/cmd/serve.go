@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/0xKa/equipment-checkout-system/server/config"
+	"github.com/0xKa/equipment-checkout-system/server/db"
 	"github.com/0xKa/equipment-checkout-system/server/handlers"
 	"github.com/0xKa/equipment-checkout-system/server/logger"
 	"github.com/0xKa/equipment-checkout-system/server/routes"
+	"github.com/0xKa/equipment-checkout-system/server/services"
 	"github.com/labstack/echo/v5"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -35,10 +37,15 @@ func runServe(_ *cobra.Command, _ []string) error {
 		_ = log.Sync()
 	}()
 
+	itemsTable := db.New()
+	itemService := services.NewItemService(itemsTable)
+	itemHandler := handlers.NewItems(itemService)
+
 	healthHandler := handlers.NewHealth()
+
 	server := echo.New()
 	server.Logger = logger.AsSlog(log)
-	routes.Register(server, healthHandler)
+	routes.Register(server, healthHandler, itemHandler)
 
 	address := cfg.HTTPAddress()
 	log.Info("starting HTTP server",
