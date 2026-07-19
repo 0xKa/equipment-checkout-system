@@ -19,7 +19,7 @@ func New(appEnv string) (*zap.Logger, error) {
 			zapcore.CapitalColorLevelEncoder
 		cfg.EncoderConfig.EncodeCaller =
 			zapcore.ShortCallerEncoder
-		cfg.EncoderConfig.ConsoleSeparator = "  "
+		cfg.EncoderConfig.ConsoleSeparator = " | "
 
 		return cfg.Build()
 	}
