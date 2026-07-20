@@ -147,17 +147,6 @@ func writeServiceError(c *echo.Context, err error) error {
 	case errors.Is(err, types.ErrAssetTagConflict):
 		return writeAPIError(c, http.StatusConflict, types.ErrorCodeAssetTagConflict, "asset_tag already exists")
 	default:
-		// Keep internal causes in logs and return a stable client-facing response.
-		c.Logger().Error("item service failed", "error", err)
-		return writeAPIError(c, http.StatusInternalServerError, types.ErrorCodeInternal, "internal server error")
+		return err
 	}
-}
-
-func writeAPIError(c *echo.Context, status int, code, message string) error {
-	return c.JSON(status, types.ErrorResponse{
-		Error: types.ErrorDetail{
-			Code:    code,
-			Message: message,
-		},
-	})
 }
