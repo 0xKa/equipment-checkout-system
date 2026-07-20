@@ -200,6 +200,132 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Create Multiple Test Items",
+      "description": "Run this folder in the Postman Collection Runner to create several sample items. Each request uses the existing single-item POST endpoint.",
+      "item": [
+        {
+          "name": "Create Test Laptop",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_tag\": \"TEST-LAP-001\",\n  \"name\": \"Lenovo ThinkPad T14\",\n  \"description\": \"Test laptop for the engineering team\",\n  \"serial_number\": \"TEST-LAP-SN-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "items"
+              ]
+            },
+            "description": "Creates the sample laptop with 201 Created."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Test Monitor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_tag\": \"TEST-MON-001\",\n  \"name\": \"Dell UltraSharp 27 Monitor\",\n  \"description\": \"Test monitor for a shared workstation\",\n  \"serial_number\": \"TEST-MON-SN-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "items"
+              ]
+            },
+            "description": "Creates the sample monitor with 201 Created."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Test Projector",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_tag\": \"TEST-PROJ-001\",\n  \"name\": \"Epson Meeting Room Projector\",\n  \"description\": \"Test projector for meeting room bookings\",\n  \"serial_number\": \"TEST-PROJ-SN-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "items"
+              ]
+            },
+            "description": "Creates the sample projector with 201 Created."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
