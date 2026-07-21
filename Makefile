@@ -4,12 +4,13 @@ MIGRATION_FILES = $(wildcard $(MIGRATIONS_DIR)/*.sql)
 SEED_FILE ?= server/db/seeds/development.sql
 RESET_FILE ?= server/db/scripts/reset-development.sql
 GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.27.2
+SQLC := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 
 -include $(ENV_FILE)
 
 REQUIRED_DATABASE_VARIABLES := POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_PORT DATABASE_URL
 
-.PHONY: check-db-env compose-up compose-down migrate-up migrate-down migrate-status seed-dev reset-dev
+.PHONY: check-db-env compose-up compose-down migrate-up migrate-down migrate-status seed-dev reset-dev sqlc
 
 # Validate that the environment file exists and contains every required database setting.
 check-db-env:
@@ -49,6 +50,10 @@ reset-dev: check-db-env
 	$(if $(filter YES,$(CONFIRM)),,$(error Destructive command. Run: make reset-dev CONFIRM=YES))
 	$(if $(wildcard $(RESET_FILE)),,$(error Missing reset file: $(RESET_FILE)))
 	@docker compose --env-file "$(ENV_FILE)" exec -T postgres psql --username "$(POSTGRES_USER)" --dbname "$(POSTGRES_DB)" --set=ON_ERROR_STOP=1 --single-transaction < "$(RESET_FILE)"
+
+# Generate pgx/v5-compatible Go code from the reviewed item and category queries.
+sqlc:
+	@$(SQLC) generate -f server/sqlc.yaml
 
 # Print a small message for quickly confirming that Make is working.
 hello:
