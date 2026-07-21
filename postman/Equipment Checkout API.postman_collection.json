@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "62cff4fc-9e67-43c2-bdb1-18642a9452b0",
     "name": "Equipment Checkout API",
-    "description": "Postman Collection v2.1 for the local Equipment Checkout API. Start the server, then run Create Item before requests that use the itemId collection variable. Item data is stored in memory and resets when the server restarts.",
+    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Apply migrations and start PostgreSQL before the API. Item and category data persists across API restarts.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -56,7 +56,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"asset_tag\": \"LAP-001\",\n  \"name\": \"Dell Latitude 7440\",\n  \"description\": \"Laptop assigned to the engineering department\",\n  \"serial_number\": \"DL7440-001\"\n}",
+              "raw": "{\n  \"asset_tag\": \"LAP-001\",\n  \"name\": \"Dell Latitude 7440\",\n  \"description\": \"Laptop assigned to the engineering department\",\n  \"serial_number\": \"DL7440-001\",\n  \"category_id\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -149,7 +149,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"asset_tag\": \"LAP-001\",\n  \"name\": \"Dell Latitude 7440 Updated\",\n  \"description\": \"Updated equipment description\",\n  \"serial_number\": \"DL7440-001\"\n}",
+              "raw": "{\n  \"asset_tag\": \"LAP-001\",\n  \"name\": \"Dell Latitude 7440 Updated\",\n  \"description\": \"Updated equipment description\",\n  \"serial_number\": \"DL7440-001\",\n  \"category_id\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -196,6 +196,97 @@
               ]
             },
             "description": "Deletes the item identified by itemId and returns 204 No Content."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Camera\",\n  \"description\": \"Photography and video equipment\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories"]
+            },
+            "description": "Creates a category with 201 Created."
+          },
+          "response": []
+        },
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories"]
+            },
+            "description": "Returns categories in ascending ID order."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories", "{{categoryId}}"]
+            },
+            "description": "Returns the category identified by categoryId."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Camera\",\n  \"description\": \"Updated photography equipment\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories", "{{categoryId}}"]
+            },
+            "description": "Fully replaces the category's editable fields."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "categories", "{{categoryId}}"]
+            },
+            "description": "Deletes an unused category with 204 No Content."
           },
           "response": []
         }
@@ -336,6 +427,11 @@
     },
     {
       "key": "itemId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
       "value": "1",
       "type": "string"
     }
