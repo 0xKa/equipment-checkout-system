@@ -2,17 +2,42 @@ package types
 
 import "errors"
 
+// errors
 var (
-	ErrInvalidInput     = errors.New("invalid input")
-	ErrItemNotFound     = errors.New("item not found")
-	ErrAssetTagConflict = errors.New("asset tag already exists")
-	ErrJSONContentType  = errors.New("content type must be application/json")
-	ErrInvalidJSON      = errors.New("invalid JSON body")
+	ErrInvalidInput         = errors.New("invalid input")
+	ErrInvalidCategoryID    = errors.New("invalid category id")
+	ErrInvalidCategoryInput = errors.New("invalid category input")
+	ErrItemNotFound         = errors.New("item not found")
+	ErrAssetTagConflict     = errors.New("asset tag already exists")
+	ErrSerialNumberConflict = errors.New("serial number already exists")
+	ErrCategoryNotFound     = errors.New("category not found")
+	ErrCategoryNameConflict = errors.New("category name already exists")
+	ErrCategoryInUse        = errors.New("category is in use")
+	ErrItemInUse            = errors.New("item is in use")
+	ErrJSONContentType      = errors.New("content type must be application/json")
+	ErrInvalidJSON          = errors.New("invalid JSON body")
 )
 
+// error codes
 const (
-	ErrorCodeInvalidRequest   = "invalid_request"
-	ErrorCodeItemNotFound     = "item_not_found"
-	ErrorCodeAssetTagConflict = "asset_tag_conflict"
-	ErrorCodeInternal         = "internal_error"
+	ErrorCodeInvalidRequest       = "invalid_request"
+	ErrorCodeItemNotFound         = "item_not_found"
+	ErrorCodeAssetTagConflict     = "asset_tag_conflict"
+	ErrorCodeSerialNumberConflict = "serial_number_conflict"
+	ErrorCodeCategoryNotFound     = "category_not_found"
+	ErrorCodeCategoryNameConflict = "category_name_conflict"
+	ErrorCodeCategoryInUse        = "category_in_use"
+	ErrorCodeItemInUse            = "item_in_use"
+	ErrorCodeInternal             = "internal_error"
 )
+
+// responses
+type ErrorResponse struct {
+	Error ErrorDetail `json:"error"`
+}
+
+type ErrorDetail struct {
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	RequestID string `json:"request_id,omitempty"`
+}
