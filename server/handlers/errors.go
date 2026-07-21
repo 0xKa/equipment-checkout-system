@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/0xKa/equipment-checkout-system/server/types"
@@ -56,6 +57,41 @@ func writeAPIError(c *echo.Context, status int, code, message string) error {
 			RequestID: requestID(c),
 		},
 	})
+}
+
+func writeJSONError(c *echo.Context, err error) error {
+	if echo.StatusCode(err) == http.StatusRequestEntityTooLarge {
+		return err
+	}
+
+	return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, err.Error())
+}
+
+func writeServiceError(c *echo.Context, err error) error {
+	switch {
+	case errors.Is(err, types.ErrInvalidInput):
+		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "asset_tag and name must not be empty")
+	case errors.Is(err, types.ErrInvalidCategoryID):
+		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "category_id must be a positive integer")
+	case errors.Is(err, types.ErrInvalidCategoryInput):
+		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "category name must not be empty")
+	case errors.Is(err, types.ErrItemNotFound):
+		return writeAPIError(c, http.StatusNotFound, types.ErrorCodeItemNotFound, "item not found")
+	case errors.Is(err, types.ErrAssetTagConflict):
+		return writeAPIError(c, http.StatusConflict, types.ErrorCodeAssetTagConflict, "asset_tag already exists")
+	case errors.Is(err, types.ErrSerialNumberConflict):
+		return writeAPIError(c, http.StatusConflict, types.ErrorCodeSerialNumberConflict, "serial_number already exists")
+	case errors.Is(err, types.ErrCategoryNotFound):
+		return writeAPIError(c, http.StatusNotFound, types.ErrorCodeCategoryNotFound, "category not found")
+	case errors.Is(err, types.ErrCategoryNameConflict):
+		return writeAPIError(c, http.StatusConflict, types.ErrorCodeCategoryNameConflict, "category name already exists")
+	case errors.Is(err, types.ErrCategoryInUse):
+		return writeAPIError(c, http.StatusConflict, types.ErrorCodeCategoryInUse, "category is assigned to one or more items")
+	case errors.Is(err, types.ErrItemInUse):
+		return writeAPIError(c, http.StatusConflict, types.ErrorCodeItemInUse, "item is referenced by existing records")
+	default:
+		return err
+	}
 }
 
 func requestID(c *echo.Context) string {
