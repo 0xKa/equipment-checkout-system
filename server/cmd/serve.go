@@ -11,6 +11,7 @@ import (
 
 	"github.com/0xKa/equipment-checkout-system/server/config"
 	"github.com/0xKa/equipment-checkout-system/server/db"
+	"github.com/0xKa/equipment-checkout-system/server/db/sqlcgen"
 	"github.com/0xKa/equipment-checkout-system/server/handlers"
 	"github.com/0xKa/equipment-checkout-system/server/logger"
 	"github.com/0xKa/equipment-checkout-system/server/middleware"
@@ -21,7 +22,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const gracefulShutdownTimeout = 10 * time.Second
+const (
+	databaseStartupTimeout  = 5 * time.Second
+	gracefulShutdownTimeout = 10 * time.Second
+)
 
 func newServeCommand() *cobra.Command {
 	return &cobra.Command{
@@ -49,19 +53,37 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 		}
 	}()
 
-	// items
-	itemsTable := db.New()
-	itemService := services.NewItemService(itemsTable)
+	databaseContext, cancelDatabaseStartup := context.WithTimeout(
+		context.Background(),
+		databaseStartupTimeout,
+	)
+	pool, err := db.NewPool(databaseContext, cfg.DatabaseURL, db.PoolOptions{
+		MaxConnections:        cfg.DBMaxConnections,
+		MinConnections:        cfg.DBMinConnections,
+		MaxConnectionLifetime: cfg.DBMaxConnectionLifetime,
+	})
+	cancelDatabaseStartup()
+	if err != nil {
+		log.Error("database startup failed", zap.Error(err))
+		return fmt.Errorf("initialize database: %w", err)
+	}
+	defer pool.Close()
+
+	queries := sqlcgen.New(pool)
+
+	itemService := services.NewItemService(queries)
 	itemHandler := handlers.NewItems(itemService)
 
-	// health
+	categoryService := services.NewCategoryService(queries)
+	categoryHandler := handlers.NewCategories(categoryService)
+
 	healthHandler := handlers.NewHealth()
 
 	server := echo.New()
 	server.Logger = logger.AsSlog(log)
 	server.HTTPErrorHandler = handlers.HTTPErrorHandler
 	middleware.Register(server)
-	routes.Register(server, healthHandler, itemHandler)
+	routes.Register(server, healthHandler, itemHandler, categoryHandler)
 
 	address := cfg.HTTPAddress()
 	log.Info("starting HTTP server",
