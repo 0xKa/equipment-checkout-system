@@ -2,16 +2,20 @@ package middleware
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	echomiddleware "github.com/labstack/echo/v5/middleware"
 )
+
+const requestTimeout = 15 * time.Second
 
 // Register installs process-wide safeguards in correlation and logging order.
 func Register(server *echo.Echo) {
 	server.Use(
 		echomiddleware.RequestID(),
 		requestLogger(),
+		echomiddleware.ContextTimeout(requestTimeout),
 		echomiddleware.Recover(),
 		echomiddleware.SecureWithConfig(echomiddleware.SecureConfig{
 			XSSProtection:         "0",

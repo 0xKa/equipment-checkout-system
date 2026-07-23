@@ -41,6 +41,7 @@ const (
 	ErrorCodeUserEmailConflict    = "email_conflict"
 	ErrorCodeInvalidActor         = "invalid_actor"
 	ErrorCodeActorInactive        = "actor_inactive"
+	ErrorCodeRequestTimeout       = "request_timeout"
 	ErrorCodeInternal             = "internal_error"
 )
 

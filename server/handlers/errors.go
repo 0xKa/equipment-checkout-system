@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -8,10 +9,22 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-// converts errors returned through Echo into the public API envelope.
+// Writes errors returned through Echo using the public API envelope.
 func HTTPErrorHandler(c *echo.Context, err error) {
 	response, _ := echo.UnwrapResponse(c.Response())
 	if response != nil && response.Committed {
+		return
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		if writeErr := writeAPIError(
+			c,
+			http.StatusGatewayTimeout,
+			types.ErrorCodeRequestTimeout,
+			"request timed out",
+		); writeErr != nil {
+			c.Logger().Error("write HTTP error response", "error", writeErr)
+		}
 		return
 	}
 
