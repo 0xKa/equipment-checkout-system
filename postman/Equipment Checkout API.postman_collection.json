@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "62cff4fc-9e67-43c2-bdb1-18642a9452b0",
     "name": "Equipment Checkout API",
-    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Apply migrations and start PostgreSQL before the API. Item and category data persists across API restarts.",
+    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Apply migrations and start PostgreSQL before the API. Item, category, and local user data persists across API restarts. X-Actor-User-ID is provisional attribution only and is not authentication.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -293,6 +293,138 @@
       ]
     },
     {
+      "name": "Users and Provisional Actor",
+      "description": "Manages local users and exercises the spoofable pre-auth actor boundary. userId selects a managed user; actorUserId must identify an active local user.",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"postman.operator\",\n  \"email\": \"postman.operator@example.test\",\n  \"display_name\": \"Postman Operator\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Creates an active user. username and display_name are required; email is optional. Usernames and present emails are unique without regard to case."
+          },
+          "response": []
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Returns active and inactive users in ascending ID order."
+          },
+          "response": []
+        },
+        {
+          "name": "List Active Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users?is_active=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"],
+              "query": [{ "key": "is_active", "value": "true" }]
+            },
+            "description": "Filters users by active state. The only accepted values are true and false."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "Returns the user identified by userId."
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"updated.operator\",\n  \"email\": null,\n  \"display_name\": \"Updated Operator\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "Fully replaces profile fields while preserving is_active. username and display_name are required; null clears the optional email."
+          },
+          "response": []
+        },
+        {
+          "name": "Set User Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}", "status"]
+            },
+            "description": "Activates or deactivates the selected user without changing profile fields."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current Provisional Actor",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "me"]
+            },
+            "description": "Resolves actorUserId to an existing active user. This header is spoofable attribution, not authentication or authorization."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Create Multiple Test Items",
       "description": "Run this folder in the Postman Collection Runner to create several sample items. Each request uses the existing single-item POST endpoint.",
       "item": [
@@ -432,6 +564,16 @@
     },
     {
       "key": "categoryId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "actorUserId",
       "value": "1",
       "type": "string"
     }
