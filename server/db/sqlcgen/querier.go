@@ -6,23 +6,39 @@ package sqlcgen
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	AssetTagExists(ctx context.Context, arg AssetTagExistsParams) (bool, error)
 	CategoryExists(ctx context.Context, id int64) (bool, error)
 	CategoryNameExists(ctx context.Context, arg CategoryNameExistsParams) (bool, error)
+	CountCheckouts(ctx context.Context) (int64, error)
+	CountItemCheckouts(ctx context.Context, itemID int64) (int64, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
+	CreateCheckout(ctx context.Context, arg CreateCheckoutParams) (Checkout, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteCategory(ctx context.Context, id int64) (int64, error)
 	DeleteItem(ctx context.Context, id int64) (int64, error)
 	GetCategory(ctx context.Context, id int64) (Category, error)
+	GetCheckout(ctx context.Context, id int64) (Checkout, error)
+	GetCheckoutBorrowerForShare(ctx context.Context, id int64) (GetCheckoutBorrowerForShareRow, error)
+	GetCheckoutForUpdate(ctx context.Context, id int64) (Checkout, error)
 	GetItem(ctx context.Context, id int64) (Item, error)
+	GetItemForStatusUpdate(ctx context.Context, id int64) (GetItemForStatusUpdateRow, error)
+	GetTransactionTimestamp(ctx context.Context) (pgtype.Timestamptz, error)
 	GetUser(ctx context.Context, id int64) (User, error)
 	ListCategories(ctx context.Context) ([]Category, error)
+	ListCheckouts(ctx context.Context, arg ListCheckoutsParams) ([]Checkout, error)
+	ListItemCheckouts(ctx context.Context, arg ListItemCheckoutsParams) ([]Checkout, error)
 	ListItems(ctx context.Context) ([]Item, error)
 	ListUsers(ctx context.Context, isActive *bool) ([]User, error)
+	RecordAuditEvent(ctx context.Context, arg RecordAuditEventParams) error
+	RecordItemStatusHistory(ctx context.Context, arg RecordItemStatusHistoryParams) error
+	ReturnCheckout(ctx context.Context, arg ReturnCheckoutParams) (Checkout, error)
+	SetItemWorkflowStatus(ctx context.Context, arg SetItemWorkflowStatusParams) (int64, error)
 	SetUserActive(ctx context.Context, arg SetUserActiveParams) (User, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error)

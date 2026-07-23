@@ -14,6 +14,7 @@ func Register(
 	itemHandler *handlers.Items,
 	categoryHandler *handlers.Categories,
 	userHandler *handlers.Users,
+	checkoutHandler *handlers.Checkouts,
 	requireActor echo.MiddlewareFunc,
 ) {
 	e.GET("/health", healthHandler.Get)
@@ -27,6 +28,8 @@ func Register(
 	items.GET("/:id", itemHandler.Get)
 	items.PUT("/:id", itemHandler.Update)
 	items.DELETE("/:id", itemHandler.Delete)
+	items.POST("/:id/checkouts", checkoutHandler.CreateForItem, requireActor)
+	items.GET("/:id/checkouts", checkoutHandler.ListForItem)
 
 	categories := v1.Group("/categories", middleware.BodyLimit(maxRequestBodyBytes))
 	categories.POST("", categoryHandler.Create)
@@ -41,6 +44,11 @@ func Register(
 	users.GET("/:id", userHandler.Get)
 	users.PUT("/:id", userHandler.Update)
 	users.PATCH("/:id/status", userHandler.SetStatus)
+
+	checkouts := v1.Group("/checkouts")
+	checkouts.GET("", checkoutHandler.List)
+	checkouts.GET("/:id", checkoutHandler.Get)
+	checkouts.POST("/:id/return", checkoutHandler.Return, requireActor)
 
 	v1.GET("/me", userHandler.Me, requireActor)
 }

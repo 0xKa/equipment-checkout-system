@@ -449,6 +449,148 @@
       ]
     },
     {
+      "name": "Checkouts",
+      "description": "Checkout and return mutations require X-Actor-User-ID for provisional attribution only. The header is spoofable and provides no authentication or authorization.",
+      "item": [
+        {
+          "name": "Create Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"borrower_user_id\": {{borrowerUserId}},\n  \"due_at\": \"2030-01-10T17:00:00Z\",\n  \"notes\": \"Presentation checkout\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items/{{itemId}}/checkouts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "{{itemId}}", "checkouts"]
+            },
+            "description": "Checks out an available item to an active borrower. Returns 201 with the checkout resource and atomically writes item status, history, and audit state."
+          },
+          "response": []
+        },
+        {
+          "name": "List Checkouts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/checkouts?limit={{checkoutLimit}}&offset={{checkoutOffset}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "checkouts"],
+              "query": [
+                { "key": "limit", "value": "{{checkoutLimit}}" },
+                { "key": "offset", "value": "{{checkoutOffset}}" }
+              ]
+            },
+            "description": "Returns checkout history in descending ID order with bounded pagination metadata."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Checkout",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/checkouts/{{checkoutId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "checkouts", "{{checkoutId}}"]
+            },
+            "description": "Returns the checkout selected by checkoutId or 404 when it does not exist."
+          },
+          "response": []
+        },
+        {
+          "name": "List Item Checkouts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items/{{itemId}}/checkouts?limit={{checkoutLimit}}&offset={{checkoutOffset}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "{{itemId}}", "checkouts"],
+              "query": [
+                { "key": "limit", "value": "{{checkoutLimit}}" },
+                { "key": "offset", "value": "{{checkoutOffset}}" }
+              ]
+            },
+            "description": "Returns checkout history for an existing item, or 404 when the item does not exist."
+          },
+          "response": []
+        },
+        {
+          "name": "Return Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/checkouts/{{checkoutId}}/return",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "checkouts", "{{checkoutId}}", "return"]
+            },
+            "description": "Returns an active checkout with 200, records actorUserId as the return recipient, and atomically restores the item to available."
+          },
+          "response": []
+        },
+        {
+          "name": "Failure - Checkout With Past Due Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"borrower_user_id\": {{borrowerUserId}},\n  \"due_at\": \"2020-01-01T00:00:00Z\",\n  \"notes\": \"Expected validation failure\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items/{{itemId}}/checkouts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "{{itemId}}", "checkouts"]
+            },
+            "description": "Expected failure example: returns 400 invalid_request and leaves checkout, item, history, and audit state unchanged."
+          },
+          "response": []
+        },
+        {
+          "name": "Failure - Return Checkout Again",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/checkouts/{{checkoutId}}/return",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "checkouts", "{{checkoutId}}", "return"]
+            },
+            "description": "Expected failure example after a successful return: returns 409 checkout_already_returned without additional history or audit rows."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Create Multiple Test Items",
       "description": "Run this folder in the Postman Collection Runner to create several sample items. Each request uses the existing single-item POST endpoint.",
       "item": [
@@ -599,6 +741,26 @@
     {
       "key": "actorUserId",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "borrowerUserId",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "checkoutId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "checkoutLimit",
+      "value": "50",
+      "type": "string"
+    },
+    {
+      "key": "checkoutOffset",
+      "value": "0",
       "type": "string"
     }
   ]
