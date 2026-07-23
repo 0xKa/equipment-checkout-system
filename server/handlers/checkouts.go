@@ -11,6 +11,9 @@ import (
 )
 
 const (
+	checkoutQueryLimit  = "limit"
+	checkoutQueryOffset = "offset"
+
 	defaultCheckoutPageLimit int32 = 50
 	maxCheckoutPageLimit     int32 = 100
 )
@@ -143,12 +146,17 @@ func (h *Checkouts) ListForItem(c *echo.Context) error {
 }
 
 func parseCheckoutPagination(c *echo.Context) (types.PaginationRequest, error) {
-	limit, err := parseCheckoutQueryInteger(c, "limit", int64(defaultCheckoutPageLimit))
+	limit, err := parseCheckoutQueryInteger(
+		c,
+		checkoutQueryLimit,
+		int64(defaultCheckoutPageLimit),
+	)
 	if err != nil || limit < 1 || limit > int64(maxCheckoutPageLimit) {
 		return types.PaginationRequest{}, types.ErrInvalidPagination
 	}
 
-	offset, err := parseCheckoutQueryInteger(c, "offset", 0)
+	offset, err := parseCheckoutQueryInteger(c, checkoutQueryOffset, 0)
+	// we check that the offset is not negative and does not exceed the maximum value of a 32-bit signed integer.
 	if err != nil || offset < 0 || offset > int64(^uint32(0)>>1) {
 		return types.PaginationRequest{}, types.ErrInvalidPagination
 	}
