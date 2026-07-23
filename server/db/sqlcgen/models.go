@@ -118,9 +118,9 @@ type Reservation struct {
 
 type User struct {
 	ID          int64
-	Username    *string
+	Username    string
 	Email       *string
-	DisplayName *string
+	DisplayName string
 	IsActive    bool
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
