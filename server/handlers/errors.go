@@ -135,6 +135,26 @@ func serviceError(err error) (int, string, string, bool) {
 		return http.StatusBadRequest, types.ErrorCodeInvalidActor, "X-Actor-User-ID must contain one positive user id", true
 	case errors.Is(err, types.ErrActorInactive):
 		return http.StatusConflict, types.ErrorCodeActorInactive, "actor user is inactive", true
+	case errors.Is(err, types.ErrInvalidBorrowerID):
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "borrower_user_id must be a positive integer", true
+	case errors.Is(err, types.ErrBorrowerNotFound):
+		return http.StatusNotFound, types.ErrorCodeUserNotFound, "borrower user not found", true
+	case errors.Is(err, types.ErrBorrowerInactive):
+		return http.StatusConflict, types.ErrorCodeBorrowerInactive, "borrower user is inactive", true
+	case errors.Is(err, types.ErrInvalidCheckoutID):
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "checkout id must be a positive integer", true
+	case errors.Is(err, types.ErrInvalidCheckoutDueAt):
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "due_at must be in the future", true
+	case errors.Is(err, types.ErrCheckoutNotFound):
+		return http.StatusNotFound, types.ErrorCodeCheckoutNotFound, "checkout not found", true
+	case errors.Is(err, types.ErrItemNotAvailable):
+		return http.StatusConflict, types.ErrorCodeItemNotAvailable, "item is not available for checkout", true
+	case errors.Is(err, types.ErrCheckoutReturned):
+		return http.StatusConflict, types.ErrorCodeCheckoutReturned, "checkout is already returned", true
+	case errors.Is(err, types.ErrCheckoutStateConflict):
+		return http.StatusConflict, types.ErrorCodeCheckoutStateConflict, "checkout and item state do not permit return", true
+	case errors.Is(err, types.ErrInvalidPagination):
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "limit must be between 1 and 100 and offset must be a nonnegative integer", true
 	default:
 		return 0, "", "", false
 	}
