@@ -11,6 +11,7 @@ import (
 const (
 	PostgresForeignKeyViolation = "23503"
 	PostgresUniqueViolation     = "23505"
+	PostgresCheckViolation      = "23514"
 )
 
 // PostgresError unwraps a PostgreSQL server error when one is present.
