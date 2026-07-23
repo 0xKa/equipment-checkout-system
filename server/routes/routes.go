@@ -13,6 +13,8 @@ func Register(
 	healthHandler *handlers.Health,
 	itemHandler *handlers.Items,
 	categoryHandler *handlers.Categories,
+	userHandler *handlers.Users,
+	requireActor echo.MiddlewareFunc,
 ) {
 	e.GET("/health", healthHandler.Get)
 
@@ -31,4 +33,13 @@ func Register(
 	categories.GET("/:id", categoryHandler.Get)
 	categories.PUT("/:id", categoryHandler.Update)
 	categories.DELETE("/:id", categoryHandler.Delete)
+
+	users := v1.Group("/users", middleware.BodyLimit(maxRequestBodyBytes))
+	users.POST("", userHandler.Create)
+	users.GET("", userHandler.List)
+	users.GET("/:id", userHandler.Get)
+	users.PUT("/:id", userHandler.Update)
+	users.PATCH("/:id/status", userHandler.SetStatus)
+
+	v1.GET("/me", userHandler.Me, requireActor)
 }

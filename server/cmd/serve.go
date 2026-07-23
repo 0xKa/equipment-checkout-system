@@ -77,13 +77,18 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	categoryService := services.NewCategoryService(queries)
 	categoryHandler := handlers.NewCategories(categoryService)
 
+	userService := services.NewUserService(queries)
+	userHandler := handlers.NewUsers(userService)
+	actorResolver := services.NewActorResolver(userService)
+	requireActor := middleware.RequireActor(actorResolver)
+
 	healthHandler := handlers.NewHealth()
 
 	server := echo.New()
 	server.Logger = logger.AsSlog(log)
 	server.HTTPErrorHandler = handlers.HTTPErrorHandler
 	middleware.Register(server)
-	routes.Register(server, healthHandler, itemHandler, categoryHandler)
+	routes.Register(server, healthHandler, itemHandler, categoryHandler, userHandler, requireActor)
 
 	address := cfg.HTTPAddress()
 	log.Info("starting HTTP server",

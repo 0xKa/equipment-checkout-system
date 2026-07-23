@@ -15,6 +15,13 @@ func HTTPErrorHandler(c *echo.Context, err error) {
 		return
 	}
 
+	if status, code, message, ok := serviceError(err); ok {
+		if writeErr := writeAPIError(c, status, code, message); writeErr != nil {
+			c.Logger().Error("write HTTP error response", "error", writeErr)
+		}
+		return
+	}
+
 	status := echo.StatusCode(err)
 	code := types.ErrorCodeInvalidRequest
 	message := http.StatusText(status)
@@ -68,29 +75,55 @@ func writeJSONError(c *echo.Context, err error) error {
 }
 
 func writeServiceError(c *echo.Context, err error) error {
+	status, code, message, ok := serviceError(err)
+	if !ok {
+		return err
+	}
+
+	return writeAPIError(c, status, code, message)
+}
+
+// Maps known domain failures to public HTTP errors.
+func serviceError(err error) (int, string, string, bool) {
 	switch {
 	case errors.Is(err, types.ErrInvalidInput):
-		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "asset_tag and name must not be empty")
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "asset_tag and name must not be empty", true
 	case errors.Is(err, types.ErrInvalidCategoryID):
-		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "category_id must be a positive integer")
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "category_id must be a positive integer", true
 	case errors.Is(err, types.ErrInvalidCategoryInput):
-		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "category name must not be empty")
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "category name must not be empty", true
 	case errors.Is(err, types.ErrItemNotFound):
-		return writeAPIError(c, http.StatusNotFound, types.ErrorCodeItemNotFound, "item not found")
+		return http.StatusNotFound, types.ErrorCodeItemNotFound, "item not found", true
 	case errors.Is(err, types.ErrAssetTagConflict):
-		return writeAPIError(c, http.StatusConflict, types.ErrorCodeAssetTagConflict, "asset_tag already exists")
+		return http.StatusConflict, types.ErrorCodeAssetTagConflict, "asset_tag already exists", true
 	case errors.Is(err, types.ErrSerialNumberConflict):
-		return writeAPIError(c, http.StatusConflict, types.ErrorCodeSerialNumberConflict, "serial_number already exists")
+		return http.StatusConflict, types.ErrorCodeSerialNumberConflict, "serial_number already exists", true
 	case errors.Is(err, types.ErrCategoryNotFound):
-		return writeAPIError(c, http.StatusNotFound, types.ErrorCodeCategoryNotFound, "category not found")
+		return http.StatusNotFound, types.ErrorCodeCategoryNotFound, "category not found", true
 	case errors.Is(err, types.ErrCategoryNameConflict):
-		return writeAPIError(c, http.StatusConflict, types.ErrorCodeCategoryNameConflict, "category name already exists")
+		return http.StatusConflict, types.ErrorCodeCategoryNameConflict, "category name already exists", true
 	case errors.Is(err, types.ErrCategoryInUse):
-		return writeAPIError(c, http.StatusConflict, types.ErrorCodeCategoryInUse, "category is assigned to one or more items")
+		return http.StatusConflict, types.ErrorCodeCategoryInUse, "category is assigned to one or more items", true
 	case errors.Is(err, types.ErrItemInUse):
-		return writeAPIError(c, http.StatusConflict, types.ErrorCodeItemInUse, "item is referenced by existing records")
+		return http.StatusConflict, types.ErrorCodeItemInUse, "item is referenced by existing records", true
+	case errors.Is(err, types.ErrInvalidUserID):
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "user id must be a positive integer", true
+	case errors.Is(err, types.ErrInvalidUserInput):
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "username and display_name are required; email must be valid when provided", true
+	case errors.Is(err, types.ErrUserNotFound):
+		return http.StatusNotFound, types.ErrorCodeUserNotFound, "user not found", true
+	case errors.Is(err, types.ErrUsernameConflict):
+		return http.StatusConflict, types.ErrorCodeUsernameConflict, "username already exists", true
+	case errors.Is(err, types.ErrUserEmailConflict):
+		return http.StatusConflict, types.ErrorCodeUserEmailConflict, "email already exists", true
+	case errors.Is(err, types.ErrActorRequired):
+		return http.StatusBadRequest, types.ErrorCodeInvalidActor, "X-Actor-User-ID header is required", true
+	case errors.Is(err, types.ErrInvalidActor):
+		return http.StatusBadRequest, types.ErrorCodeInvalidActor, "X-Actor-User-ID must contain one positive user id", true
+	case errors.Is(err, types.ErrActorInactive):
+		return http.StatusConflict, types.ErrorCodeActorInactive, "actor user is inactive", true
 	default:
-		return err
+		return 0, "", "", false
 	}
 }
 
