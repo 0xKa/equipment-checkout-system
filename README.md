@@ -1,6 +1,6 @@
 # Equipment Checkout System
 
-A Go REST API for managing equipment, categories, and local users, with PostgreSQL persistence and a foundation for checkout, return, reservation, and maintenance workflows.
+A Go REST API for managing equipment, categories, local users, and transactional checkout/return workflows with PostgreSQL persistence.
 
 The development environment uses Docker Compose to start PostgreSQL, apply Goose migrations, and run the API. Authentication and authorization are not implemented yet; `X-Actor-User-ID` is development attribution only.
 
