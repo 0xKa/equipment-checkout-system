@@ -8,7 +8,6 @@ require (
 	github.com/labstack/echo/v5 v5.3.0
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.28.0
-	go.uber.org/zap/exp v0.3.0
 )
 
 require (

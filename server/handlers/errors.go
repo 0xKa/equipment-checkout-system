@@ -7,10 +7,17 @@ import (
 
 	"github.com/0xKa/equipment-checkout-system/server/types"
 	"github.com/labstack/echo/v5"
+	"go.uber.org/zap"
 )
 
-// Writes errors returned through Echo using the public API envelope.
-func HTTPErrorHandler(c *echo.Context, err error) {
+// NewHTTPErrorHandler returns an Echo error handler that writes the public API envelope.
+func NewHTTPErrorHandler(log *zap.Logger) echo.HTTPErrorHandler {
+	return func(c *echo.Context, err error) {
+		handleHTTPError(c, err, log)
+	}
+}
+
+func handleHTTPError(c *echo.Context, err error, log *zap.Logger) {
 	response, _ := echo.UnwrapResponse(c.Response())
 	if response != nil && response.Committed {
 		return
@@ -23,14 +30,14 @@ func HTTPErrorHandler(c *echo.Context, err error) {
 			types.ErrorCodeRequestTimeout,
 			"request timed out",
 		); writeErr != nil {
-			c.Logger().Error("write HTTP error response", "error", writeErr)
+			log.Error("write HTTP error response", zap.Error(writeErr))
 		}
 		return
 	}
 
 	if status, code, message, ok := serviceError(err); ok {
 		if writeErr := writeAPIError(c, status, code, message); writeErr != nil {
-			c.Logger().Error("write HTTP error response", "error", writeErr)
+			log.Error("write HTTP error response", zap.Error(writeErr))
 		}
 		return
 	}
@@ -59,13 +66,13 @@ func HTTPErrorHandler(c *echo.Context, err error) {
 
 	if c.Request().Method == http.MethodHead {
 		if writeErr := c.NoContent(status); writeErr != nil {
-			c.Logger().Error("write HTTP error response", "error", writeErr)
+			log.Error("write HTTP error response", zap.Error(writeErr))
 		}
 		return
 	}
 
 	if writeErr := writeAPIError(c, status, code, message); writeErr != nil {
-		c.Logger().Error("write HTTP error response", "error", writeErr)
+		log.Error("write HTTP error response", zap.Error(writeErr))
 	}
 }
 

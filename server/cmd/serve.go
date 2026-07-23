@@ -89,9 +89,8 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	healthHandler := handlers.NewHealth(pool)
 
 	server := echo.New()
-	server.Logger = logger.AsSlog(log)
-	server.HTTPErrorHandler = handlers.HTTPErrorHandler
-	middleware.Register(server)
+	server.HTTPErrorHandler = handlers.NewHTTPErrorHandler(log)
+	middleware.Register(server, log)
 	routes.Register(
 		server,
 		healthHandler,

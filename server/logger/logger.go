@@ -1,11 +1,9 @@
 package logger
 
 import (
-	"log/slog"
 	"strings"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -30,11 +28,4 @@ func New(appEnv string) (*zap.Logger, error) {
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	return cfg.Build()
-}
-
-func AsSlog(log *zap.Logger) *slog.Logger {
-	return slog.New(zapslog.NewHandler(
-		log.Core(),
-		zapslog.WithCaller(true),
-	))
 }
