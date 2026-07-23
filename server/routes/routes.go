@@ -17,6 +17,7 @@ func Register(
 	requireActor echo.MiddlewareFunc,
 ) {
 	e.GET("/health", healthHandler.Get)
+	e.GET("/ready", healthHandler.Ready)
 
 	v1 := e.Group("/api/v1")
 

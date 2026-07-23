@@ -82,7 +82,7 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	actorResolver := services.NewActorResolver(userService)
 	requireActor := middleware.RequireActor(actorResolver)
 
-	healthHandler := handlers.NewHealth()
+	healthHandler := handlers.NewHealth(pool)
 
 	server := echo.New()
 	server.Logger = logger.AsSlog(log)

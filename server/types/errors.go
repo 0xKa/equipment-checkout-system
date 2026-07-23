@@ -42,6 +42,7 @@ const (
 	ErrorCodeInvalidActor         = "invalid_actor"
 	ErrorCodeActorInactive        = "actor_inactive"
 	ErrorCodeRequestTimeout       = "request_timeout"
+	ErrorCodeServiceUnavailable   = "service_unavailable"
 	ErrorCodeInternal             = "internal_error"
 )
 
