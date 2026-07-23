@@ -10,7 +10,7 @@ SQLC := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 
 REQUIRED_DATABASE_VARIABLES := POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_PORT DATABASE_URL
 
-.PHONY: check-db-env compose-up compose-down migrate-up migrate-down migrate-status seed-dev reset-dev sqlc
+.PHONY: check-db-env compose-up db-up compose-down migrate-up migrate-down migrate-status seed-dev reset-dev sqlc
 
 # Validate that the environment file exists and contains every required database setting.
 check-db-env:
@@ -18,8 +18,12 @@ check-db-env:
 	$(foreach variable,$(REQUIRED_DATABASE_VARIABLES),$(if $(strip $($(variable))),,$(error $(variable) is missing from $(ENV_FILE))))
 	@echo Database configuration loaded from $(ENV_FILE).
 
-# Start PostgreSQL in the background and wait until its health check succeeds.
+# Build and start PostgreSQL, apply migrations, and wait for the API to become ready.
 compose-up: check-db-env
+	docker compose --env-file $(ENV_FILE) up --detach --build --wait
+
+# Start only PostgreSQL for running the API directly on the host.
+db-up: check-db-env
 	docker compose --env-file $(ENV_FILE) up --detach --wait postgres
 
 # Stop the Compose project without removing its named volume, preserving local database data.
@@ -51,7 +55,7 @@ reset-dev: check-db-env
 	$(if $(wildcard $(RESET_FILE)),,$(error Missing reset file: $(RESET_FILE)))
 	@docker compose --env-file "$(ENV_FILE)" exec -T postgres psql --username "$(POSTGRES_USER)" --dbname "$(POSTGRES_DB)" --set=ON_ERROR_STOP=1 --single-transaction < "$(RESET_FILE)"
 
-# Generate pgx/v5-compatible Go code from the reviewed item and category queries.
+# Generate pgx/v5-compatible Go code from the reviewed queries.
 sqlc:
 	@$(SQLC) generate -f server/sqlc.yaml
 

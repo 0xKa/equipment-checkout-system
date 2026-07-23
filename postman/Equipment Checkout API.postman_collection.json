@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "62cff4fc-9e67-43c2-bdb1-18642a9452b0",
     "name": "Equipment Checkout API",
-    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Apply migrations and start PostgreSQL before the API. Item, category, and local user data persists across API restarts. X-Actor-User-ID is provisional attribution only and is not authentication.",
+    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL, apply migrations, and wait for readiness. Seed data remains optional and explicit. Item, category, and local user data persists across API restarts. X-Actor-User-ID is provisional attribution only and is not authentication.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -29,7 +29,31 @@
                 "health"
               ]
             },
-            "description": "Returns the API health status with 200 OK."
+            "description": "Returns process liveness with 200 OK without contacting PostgreSQL."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Readiness",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ready",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            },
+            "description": "Returns 200 OK when PostgreSQL is reachable. Returns a generic 503 error envelope without database details when the application is not ready."
           },
           "response": []
         }
