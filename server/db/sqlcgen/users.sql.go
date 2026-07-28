@@ -26,7 +26,9 @@ RETURNING
     display_name,
     is_active,
     created_at,
-    updated_at
+    updated_at,
+    identity_issuer,
+    external_subject
 `
 
 type CreateUserParams struct {
@@ -46,6 +48,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
 	)
 	return i, err
 }
@@ -58,7 +62,9 @@ SELECT
     display_name,
     is_active,
     created_at,
-    updated_at
+    updated_at,
+    identity_issuer,
+    external_subject
 FROM users
 WHERE id = $1
 `
@@ -74,6 +80,46 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
+	)
+	return i, err
+}
+
+const getUserByExternalIdentity = `-- name: GetUserByExternalIdentity :one
+SELECT
+    id,
+    username,
+    email,
+    display_name,
+    is_active,
+    created_at,
+    updated_at,
+    identity_issuer,
+    external_subject
+FROM users
+WHERE identity_issuer = $1
+  AND external_subject = $2
+`
+
+type GetUserByExternalIdentityParams struct {
+	IdentityIssuer  *string
+	ExternalSubject *string
+}
+
+func (q *Queries) GetUserByExternalIdentity(ctx context.Context, arg GetUserByExternalIdentityParams) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByExternalIdentity, arg.IdentityIssuer, arg.ExternalSubject)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.DisplayName,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
 	)
 	return i, err
 }
@@ -86,7 +132,9 @@ SELECT
     display_name,
     is_active,
     created_at,
-    updated_at
+    updated_at,
+    identity_issuer,
+    external_subject
 FROM users
 WHERE $1::boolean IS NULL
    OR is_active = $1
@@ -110,6 +158,8 @@ func (q *Queries) ListUsers(ctx context.Context, isActive *bool) ([]User, error)
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IdentityIssuer,
+			&i.ExternalSubject,
 		); err != nil {
 			return nil, err
 		}
@@ -134,7 +184,9 @@ RETURNING
     display_name,
     is_active,
     created_at,
-    updated_at
+    updated_at,
+    identity_issuer,
+    external_subject
 `
 
 type SetUserActiveParams struct {
@@ -153,6 +205,8 @@ func (q *Queries) SetUserActive(ctx context.Context, arg SetUserActiveParams) (U
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
 	)
 	return i, err
 }
@@ -172,7 +226,9 @@ RETURNING
     display_name,
     is_active,
     created_at,
-    updated_at
+    updated_at,
+    identity_issuer,
+    external_subject
 `
 
 type UpdateUserParams struct {
@@ -198,6 +254,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
 	)
 	return i, err
 }

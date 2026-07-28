@@ -30,6 +30,7 @@ type Querier interface {
 	GetItemForStatusUpdate(ctx context.Context, id int64) (GetItemForStatusUpdateRow, error)
 	GetTransactionTimestamp(ctx context.Context) (pgtype.Timestamptz, error)
 	GetUser(ctx context.Context, id int64) (User, error)
+	GetUserByExternalIdentity(ctx context.Context, arg GetUserByExternalIdentityParams) (User, error)
 	ListCategories(ctx context.Context) ([]Category, error)
 	ListCheckouts(ctx context.Context, arg ListCheckoutsParams) ([]Checkout, error)
 	ListItemCheckouts(ctx context.Context, arg ListItemCheckoutsParams) ([]Checkout, error)

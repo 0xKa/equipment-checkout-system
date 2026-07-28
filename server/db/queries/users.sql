@@ -15,7 +15,9 @@ RETURNING
     display_name,
     is_active,
     created_at,
-    updated_at;
+    updated_at,
+    identity_issuer,
+    external_subject;
 
 -- name: ListUsers :many
 SELECT
@@ -25,7 +27,9 @@ SELECT
     display_name,
     is_active,
     created_at,
-    updated_at
+    updated_at,
+    identity_issuer,
+    external_subject
 FROM users
 WHERE sqlc.narg(is_active)::boolean IS NULL
    OR is_active = sqlc.narg(is_active)
@@ -39,9 +43,26 @@ SELECT
     display_name,
     is_active,
     created_at,
-    updated_at
+    updated_at,
+    identity_issuer,
+    external_subject
 FROM users
 WHERE id = sqlc.arg(id);
+
+-- name: GetUserByExternalIdentity :one
+SELECT
+    id,
+    username,
+    email,
+    display_name,
+    is_active,
+    created_at,
+    updated_at,
+    identity_issuer,
+    external_subject
+FROM users
+WHERE identity_issuer = sqlc.arg(identity_issuer)
+  AND external_subject = sqlc.arg(external_subject);
 
 -- name: UpdateUser :one
 UPDATE users
@@ -58,7 +79,9 @@ RETURNING
     display_name,
     is_active,
     created_at,
-    updated_at;
+    updated_at,
+    identity_issuer,
+    external_subject;
 
 -- name: SetUserActive :one
 UPDATE users
@@ -73,7 +96,9 @@ RETURNING
     display_name,
     is_active,
     created_at,
-    updated_at;
+    updated_at,
+    identity_issuer,
+    external_subject;
 
 -- name: UsernameExists :one
 SELECT EXISTS (

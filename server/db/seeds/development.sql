@@ -4,20 +4,72 @@
 INSERT INTO users (username, email, display_name)
 SELECT 'equipment.admin', 'admin@example.test', 'Equipment Administrator'
 WHERE NOT EXISTS (
-    SELECT 1 FROM users WHERE email = 'admin@example.test'
+    SELECT 1
+    FROM users
+    WHERE username = 'equipment.admin'
+      AND email = 'admin@example.test'
 );
 
 INSERT INTO users (username, email, display_name)
 SELECT 'sample.borrower', 'borrower@example.test', 'Sample Borrower'
 WHERE NOT EXISTS (
-    SELECT 1 FROM users WHERE email = 'borrower@example.test'
+    SELECT 1
+    FROM users
+    WHERE username = 'sample.borrower'
+      AND email = 'borrower@example.test'
+);
+
+INSERT INTO users (username, email, display_name)
+SELECT 'audit.viewer', 'audit@example.test', 'Audit Viewer'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE username = 'audit.viewer'
+      AND email = 'audit@example.test'
 );
 
 INSERT INTO users (username, email, display_name)
 SELECT 'maintenance.tech', 'technician@example.test', 'Maintenance Technician'
 WHERE NOT EXISTS (
-    SELECT 1 FROM users WHERE email = 'technician@example.test'
+    SELECT 1
+    FROM users
+    WHERE username = 'maintenance.tech'
+      AND email = 'technician@example.test'
 );
+
+-- Link only the exact intended development profiles to canonical Keycloak identities.
+UPDATE users
+SET
+    identity_issuer = development_identities.identity_issuer,
+    external_subject = development_identities.external_subject,
+    updated_at = GREATEST(statement_timestamp(), users.updated_at + INTERVAL '1 microsecond')
+FROM (
+    VALUES
+        (
+            'equipment.admin',
+            'admin@example.test',
+            'http://localhost:8081/realms/equipment',
+            'e6549747-b961-4b7f-8b7d-dd894bca6d75'
+        ),
+        (
+            'sample.borrower',
+            'borrower@example.test',
+            'http://localhost:8081/realms/equipment',
+            '65b693e8-4199-452b-8277-ae9fd2264ac3'
+        ),
+        (
+            'audit.viewer',
+            'audit@example.test',
+            'http://localhost:8081/realms/equipment',
+            '16c37149-7558-454f-94c1-73ca1e337541'
+        )
+) AS development_identities(username, email, identity_issuer, external_subject)
+WHERE users.username = development_identities.username
+  AND users.email = development_identities.email
+  AND (
+      users.identity_issuer IS DISTINCT FROM development_identities.identity_issuer
+      OR users.external_subject IS DISTINCT FROM development_identities.external_subject
+  );
 
 INSERT INTO locations (code, name, description)
 VALUES ('HQ', 'Headquarters', 'Primary office location')
@@ -409,6 +461,7 @@ SELECT format(
     (SELECT count(*) FROM users WHERE email IN (
         'admin@example.test',
         'borrower@example.test',
+        'audit@example.test',
         'technician@example.test'
     )),
     (SELECT count(*) FROM locations WHERE code IN (

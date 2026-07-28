@@ -117,11 +117,13 @@ type Reservation struct {
 }
 
 type User struct {
-	ID          int64
-	Username    string
-	Email       *string
-	DisplayName string
-	IsActive    bool
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+	ID              int64
+	Username        string
+	Email           *string
+	DisplayName     string
+	IsActive        bool
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	IdentityIssuer  *string
+	ExternalSubject *string
 }

@@ -19,6 +19,7 @@ var (
 	ErrUserNotFound          = errors.New("user not found")
 	ErrUsernameConflict      = errors.New("username already exists")
 	ErrUserEmailConflict     = errors.New("user email already exists")
+	ErrIdentityNotLinked     = errors.New("external identity is not linked")
 	ErrActorRequired         = errors.New("actor user id is required")
 	ErrInvalidActor          = errors.New("invalid actor user id")
 	ErrActorInactive         = errors.New("actor is inactive")
