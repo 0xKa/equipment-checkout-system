@@ -12,9 +12,29 @@ SELECT
 FROM checkouts
 WHERE id = sqlc.arg(id);
 
+-- name: GetCheckoutForBorrower :one
+SELECT
+    id,
+    item_id,
+    borrower_user_id,
+    created_by_user_id,
+    returned_to_user_id,
+    checked_out_at,
+    due_at,
+    returned_at,
+    notes
+FROM checkouts
+WHERE id = sqlc.arg(id)
+  AND borrower_user_id = sqlc.arg(borrower_user_id);
+
 -- name: CountCheckouts :one
 SELECT count(*)::bigint
 FROM checkouts;
+
+-- name: CountCheckoutsByBorrower :one
+SELECT count(*)::bigint
+FROM checkouts
+WHERE borrower_user_id = sqlc.arg(borrower_user_id);
 
 -- name: ListCheckouts :many
 SELECT
@@ -28,6 +48,23 @@ SELECT
     returned_at,
     notes
 FROM checkouts
+ORDER BY id DESC
+LIMIT sqlc.arg(page_limit)
+OFFSET sqlc.arg(page_offset);
+
+-- name: ListCheckoutsByBorrower :many
+SELECT
+    id,
+    item_id,
+    borrower_user_id,
+    created_by_user_id,
+    returned_to_user_id,
+    checked_out_at,
+    due_at,
+    returned_at,
+    notes
+FROM checkouts
+WHERE borrower_user_id = sqlc.arg(borrower_user_id)
 ORDER BY id DESC
 LIMIT sqlc.arg(page_limit)
 OFFSET sqlc.arg(page_offset);

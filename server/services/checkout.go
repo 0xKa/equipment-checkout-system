@@ -87,6 +87,9 @@ func (s *checkoutService) Checkout(
 	if err != nil {
 		return types.Checkout{}, err
 	}
+	if err := authorizeCheckoutBorrower(actor, input.BorrowerUserID); err != nil {
+		return types.Checkout{}, err
+	}
 	input, err = normalizeCheckoutInput(input)
 	if err != nil {
 		return types.Checkout{}, err
@@ -213,6 +216,10 @@ func (s *checkoutService) Return(
 		if err != nil {
 			return err
 		}
+		if !canManageCheckouts(actor) &&
+			(!canUseSelfCheckout(actor) || current.BorrowerUserID != actor.User.ID) {
+			return types.ErrForbidden
+		}
 		if current.ReturnedAt.Valid {
 			return types.ErrCheckoutReturned
 		}
@@ -301,7 +308,26 @@ func (s *checkoutService) GetByID(
 		return types.Checkout{}, types.ErrInvalidCheckoutID
 	}
 
-	row, err := s.queries.GetCheckout(ctx, checkoutID)
+	actor, err := checkoutActor(ctx)
+	if err != nil {
+		return types.Checkout{}, err
+	}
+
+	var row sqlcgen.Checkout
+	switch {
+	case canReadAllCheckouts(actor):
+		row, err = s.queries.GetCheckout(ctx, checkoutID)
+	case canUseSelfCheckout(actor):
+		row, err = s.queries.GetCheckoutForBorrower(
+			ctx,
+			sqlcgen.GetCheckoutForBorrowerParams{
+				ID:             checkoutID,
+				BorrowerUserID: actor.User.ID,
+			},
+		)
+	default:
+		return types.Checkout{}, types.ErrForbidden
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return types.Checkout{}, types.ErrCheckoutNotFound
 	}
@@ -323,19 +349,42 @@ func (s *checkoutService) List(
 		return nil, types.PaginationMetadata{}, err
 	}
 
-	total, err := s.queries.CountCheckouts(ctx)
+	actor, err := checkoutActor(ctx)
 	if err != nil {
-		return nil, types.PaginationMetadata{},
-			utils.UnexpectedDatabaseError(ctx, "count checkouts", err)
+		return nil, types.PaginationMetadata{}, err
 	}
 
-	rows, err := s.queries.ListCheckouts(ctx, sqlcgen.ListCheckoutsParams{
-		PageOffset: pagination.Offset,
-		PageLimit:  pagination.Limit,
-	})
+	var (
+		total int64
+		rows  []sqlcgen.Checkout
+	)
+	switch {
+	case canReadAllCheckouts(actor):
+		total, err = s.queries.CountCheckouts(ctx)
+		if err == nil {
+			rows, err = s.queries.ListCheckouts(ctx, sqlcgen.ListCheckoutsParams{
+				PageOffset: pagination.Offset,
+				PageLimit:  pagination.Limit,
+			})
+		}
+	case canUseSelfCheckout(actor):
+		total, err = s.queries.CountCheckoutsByBorrower(ctx, actor.User.ID)
+		if err == nil {
+			rows, err = s.queries.ListCheckoutsByBorrower(
+				ctx,
+				sqlcgen.ListCheckoutsByBorrowerParams{
+					BorrowerUserID: actor.User.ID,
+					PageOffset:     pagination.Offset,
+					PageLimit:      pagination.Limit,
+				},
+			)
+		}
+	default:
+		return nil, types.PaginationMetadata{}, types.ErrForbidden
+	}
 	if err != nil {
 		return nil, types.PaginationMetadata{},
-			utils.UnexpectedDatabaseError(ctx, "list checkouts", err)
+			utils.UnexpectedDatabaseError(ctx, "list authorized checkouts", err)
 	}
 
 	checkouts := checkoutsFromRows(rows)
@@ -355,6 +404,14 @@ func (s *checkoutService) ListByItem(
 	}
 	if err := validateCheckoutPagination(pagination); err != nil {
 		return nil, types.PaginationMetadata{}, err
+	}
+
+	actor, err := checkoutActor(ctx)
+	if err != nil {
+		return nil, types.PaginationMetadata{}, err
+	}
+	if !canReadAllCheckouts(actor) {
+		return nil, types.PaginationMetadata{}, types.ErrForbidden
 	}
 
 	if _, err := s.queries.GetItem(ctx, itemID); errors.Is(err, pgx.ErrNoRows) {
@@ -413,6 +470,29 @@ func checkoutActor(ctx context.Context) (types.Actor, error) {
 		return types.Actor{}, types.ErrAuthenticationRequired
 	}
 	return actor, nil
+}
+
+func authorizeCheckoutBorrower(actor types.Actor, borrowerUserID int64) error {
+	switch {
+	case canManageCheckouts(actor):
+		return nil
+	case canUseSelfCheckout(actor) && borrowerUserID == actor.User.ID:
+		return nil
+	default:
+		return types.ErrForbidden
+	}
+}
+
+func canUseSelfCheckout(actor types.Actor) bool {
+	return actor.Capabilities.Has(types.CapabilityCheckoutSelf)
+}
+
+func canManageCheckouts(actor types.Actor) bool {
+	return actor.Capabilities.Has(types.CapabilityCheckoutManage)
+}
+
+func canReadAllCheckouts(actor types.Actor) bool {
+	return actor.Capabilities.Has(types.CapabilityCheckoutHistoryReadAll)
 }
 
 func checkoutDueAt(dueAt *time.Time) pgtype.Timestamptz {
@@ -489,6 +569,7 @@ func itemStatusAuditData(previousStatus, newStatus string) ([]byte, []byte, erro
 func mapCheckoutWorkflowError(ctx context.Context, operation string, err error) error {
 	switch {
 	case errors.Is(err, types.ErrAuthenticationRequired),
+		errors.Is(err, types.ErrForbidden),
 		errors.Is(err, types.ErrInvalidBorrowerID),
 		errors.Is(err, types.ErrBorrowerNotFound),
 		errors.Is(err, types.ErrBorrowerInactive),

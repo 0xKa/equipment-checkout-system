@@ -102,14 +102,21 @@ an active local user, and derives application capabilities from the
 
 | Keycloak role | Current API access |
 | --- | --- |
-| `employee` | `/me` and item/category reads |
-| `auditor` | `/me`, item/category reads, and checkout-history reads |
-| `inventory_admin` | All current routes, including inventory mutations, local-user management, checkout, and return |
+| `employee` | `/me`, item/category reads, self checkout/return, and own checkout list/get |
+| `auditor` | `/me`, item/category reads, all checkout list/get, and item-wide checkout history |
+| `inventory_admin` | All current routes, including on-behalf checkout/return and local-user management |
 
-Checkout and return are intentionally inventory-admin-only in Milestone 6.
-Milestone 7 adds the final self-service ownership rules. Client-supplied local
-user IDs are never an identity source and cannot override the token-derived
-actor.
+Employees must send their own local user ID as `borrower_user_id`; a mismatch
+returns `403 forbidden`. Administrators may check out equipment for any active
+local borrower. Employees may return and read only their own checkout records;
+an attempt to get another borrower's checkout returns `404`. Employee lists
+are borrower-filtered in PostgreSQL, while administrators and auditors retain
+bounded all-record reads. Item-wide history remains administrator/auditor
+only.
+
+The authenticated actor, borrower, and return recipient remain distinct.
+Client-supplied local user IDs are never an identity source and cannot
+override the token-derived actor used for history and audit attribution.
 
 Local-user routes manage application profiles, not Keycloak credentials.
 `POST /api/v1/users` creates an unlinked local user, and profile or status

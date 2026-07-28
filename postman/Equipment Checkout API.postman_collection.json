@@ -455,7 +455,7 @@
     },
     {
       "name": "Checkouts",
-      "description": "Checkout history requires checkout.history.read_all. Checkout and return temporarily require checkout.manage until Milestone 7 adds self-service ownership rules. Workflow attribution always uses the token-derived local actor.",
+      "description": "Employees may check out and return equipment for themselves and may list/get only their own checkout records. Set borrowerUserId to the employee's local user ID. Inventory administrators may act for any active borrower and read all records; auditors have all-record and item-history reads but no mutation access. Workflow attribution always uses the token-derived local actor.",
       "item": [
         {
           "name": "Create Checkout",
@@ -475,7 +475,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "items", "{{itemId}}", "checkouts"]
             },
-            "description": "Checks out an available item to an active borrower. Returns 201 with the checkout resource and atomically writes item status, history, and audit state."
+            "description": "Checks out an available item to an active borrower. Employees must set borrowerUserId to their own local ID; administrators may select another active borrower. Returns 201 and atomically writes checkout, item status, history, and audit state."
           },
           "response": []
         },
@@ -495,7 +495,7 @@
                 { "key": "offset", "value": "{{checkoutOffset}}" }
               ]
             },
-            "description": "Returns checkout history in descending ID order with bounded pagination metadata."
+            "description": "Returns checkout history in descending ID order with bounded pagination metadata. Employees receive only their own borrower-filtered records; administrators and auditors receive all records."
           },
           "response": []
         },
@@ -511,7 +511,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "checkouts", "{{checkoutId}}"]
             },
-            "description": "Returns the checkout selected by checkoutId or 404 when it does not exist."
+            "description": "Returns the checkout selected by checkoutId. Employees receive 404 for another borrower's record; administrators and auditors may read any record."
           },
           "response": []
         },
@@ -531,7 +531,7 @@
                 { "key": "offset", "value": "{{checkoutOffset}}" }
               ]
             },
-            "description": "Returns checkout history for an existing item, or 404 when the item does not exist."
+            "description": "Returns checkout history for an existing item to administrators and auditors. Employees receive 403 because item-wide history can expose other borrowers."
           },
           "response": []
         },
@@ -547,7 +547,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "checkouts", "{{checkoutId}}", "return"]
             },
-            "description": "Returns an active checkout with 200, records the token-derived actor as the return recipient, and atomically restores the item to available."
+            "description": "Returns an active checkout with 200 and atomically restores the item to available. Employees may return only their own active checkout; administrators may return any. The token-derived actor is recorded as the return recipient."
           },
           "response": []
         },

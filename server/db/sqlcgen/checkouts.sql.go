@@ -23,6 +23,19 @@ func (q *Queries) CountCheckouts(ctx context.Context) (int64, error) {
 	return column_1, err
 }
 
+const countCheckoutsByBorrower = `-- name: CountCheckoutsByBorrower :one
+SELECT count(*)::bigint
+FROM checkouts
+WHERE borrower_user_id = $1
+`
+
+func (q *Queries) CountCheckoutsByBorrower(ctx context.Context, borrowerUserID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countCheckoutsByBorrower, borrowerUserID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countItemCheckouts = `-- name: CountItemCheckouts :one
 SELECT count(*)::bigint
 FROM checkouts
@@ -146,6 +159,44 @@ func (q *Queries) GetCheckoutBorrowerForShare(ctx context.Context, id int64) (Ge
 	return i, err
 }
 
+const getCheckoutForBorrower = `-- name: GetCheckoutForBorrower :one
+SELECT
+    id,
+    item_id,
+    borrower_user_id,
+    created_by_user_id,
+    returned_to_user_id,
+    checked_out_at,
+    due_at,
+    returned_at,
+    notes
+FROM checkouts
+WHERE id = $1
+  AND borrower_user_id = $2
+`
+
+type GetCheckoutForBorrowerParams struct {
+	ID             int64
+	BorrowerUserID int64
+}
+
+func (q *Queries) GetCheckoutForBorrower(ctx context.Context, arg GetCheckoutForBorrowerParams) (Checkout, error) {
+	row := q.db.QueryRow(ctx, getCheckoutForBorrower, arg.ID, arg.BorrowerUserID)
+	var i Checkout
+	err := row.Scan(
+		&i.ID,
+		&i.ItemID,
+		&i.BorrowerUserID,
+		&i.CreatedByUserID,
+		&i.ReturnedToUserID,
+		&i.CheckedOutAt,
+		&i.DueAt,
+		&i.ReturnedAt,
+		&i.Notes,
+	)
+	return i, err
+}
+
 const getCheckoutForUpdate = `-- name: GetCheckoutForUpdate :one
 SELECT
     id,
@@ -235,6 +286,60 @@ type ListCheckoutsParams struct {
 
 func (q *Queries) ListCheckouts(ctx context.Context, arg ListCheckoutsParams) ([]Checkout, error) {
 	rows, err := q.db.Query(ctx, listCheckouts, arg.PageOffset, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Checkout{}
+	for rows.Next() {
+		var i Checkout
+		if err := rows.Scan(
+			&i.ID,
+			&i.ItemID,
+			&i.BorrowerUserID,
+			&i.CreatedByUserID,
+			&i.ReturnedToUserID,
+			&i.CheckedOutAt,
+			&i.DueAt,
+			&i.ReturnedAt,
+			&i.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCheckoutsByBorrower = `-- name: ListCheckoutsByBorrower :many
+SELECT
+    id,
+    item_id,
+    borrower_user_id,
+    created_by_user_id,
+    returned_to_user_id,
+    checked_out_at,
+    due_at,
+    returned_at,
+    notes
+FROM checkouts
+WHERE borrower_user_id = $1
+ORDER BY id DESC
+LIMIT $3
+OFFSET $2
+`
+
+type ListCheckoutsByBorrowerParams struct {
+	BorrowerUserID int64
+	PageOffset     int32
+	PageLimit      int32
+}
+
+func (q *Queries) ListCheckoutsByBorrower(ctx context.Context, arg ListCheckoutsByBorrowerParams) ([]Checkout, error) {
+	rows, err := q.db.Query(ctx, listCheckoutsByBorrower, arg.BorrowerUserID, arg.PageOffset, arg.PageLimit)
 	if err != nil {
 		return nil, err
 	}

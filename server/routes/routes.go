@@ -33,8 +33,13 @@ func Register(
 	requireUsersManage := appmiddleware.RequireCapability(
 		types.CapabilityUsersManage,
 	)
-	requireCheckoutManage := appmiddleware.RequireCapability(
+	requireCheckoutSelfOrManage := appmiddleware.RequireAnyCapability(
+		types.CapabilityCheckoutSelf,
 		types.CapabilityCheckoutManage,
+	)
+	requireCheckoutSelfOrHistoryReadAll := appmiddleware.RequireAnyCapability(
+		types.CapabilityCheckoutSelf,
+		types.CapabilityCheckoutHistoryReadAll,
 	)
 	requireCheckoutHistoryReadAll := appmiddleware.RequireCapability(
 		types.CapabilityCheckoutHistoryReadAll,
@@ -46,7 +51,7 @@ func Register(
 	items.GET("/:id", itemHandler.Get, requireInventoryRead)
 	items.PUT("/:id", itemHandler.Update, requireInventoryManage)
 	items.DELETE("/:id", itemHandler.Delete, requireInventoryManage)
-	items.POST("/:id/checkouts", checkoutHandler.CreateForItem, requireCheckoutManage)
+	items.POST("/:id/checkouts", checkoutHandler.CreateForItem, requireCheckoutSelfOrManage)
 	items.GET("/:id/checkouts", checkoutHandler.ListForItem, requireCheckoutHistoryReadAll)
 
 	categories := v1.Group("/categories", echomiddleware.BodyLimit(maxRequestBodyBytes))
@@ -64,9 +69,9 @@ func Register(
 	users.PATCH("/:id/status", userHandler.SetStatus, requireUsersManage)
 
 	checkouts := v1.Group("/checkouts")
-	checkouts.GET("", checkoutHandler.List, requireCheckoutHistoryReadAll)
-	checkouts.GET("/:id", checkoutHandler.Get, requireCheckoutHistoryReadAll)
-	checkouts.POST("/:id/return", checkoutHandler.Return, requireCheckoutManage)
+	checkouts.GET("", checkoutHandler.List, requireCheckoutSelfOrHistoryReadAll)
+	checkouts.GET("/:id", checkoutHandler.Get, requireCheckoutSelfOrHistoryReadAll)
+	checkouts.POST("/:id/return", checkoutHandler.Return, requireCheckoutSelfOrManage)
 
 	v1.GET("/me", userHandler.Me)
 }
