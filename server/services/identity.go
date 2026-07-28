@@ -52,7 +52,7 @@ func (r *identityResolver) Resolve(
 
 	user := userFromRow(row)
 	if !user.IsActive {
-		return types.Actor{}, types.ErrActorInactive
+		return types.Actor{}, types.ErrAccountInactive
 	}
 
 	return types.Actor{User: user}, nil

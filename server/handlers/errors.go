@@ -148,12 +148,6 @@ func serviceError(err error) (int, string, string, bool) {
 		return http.StatusForbidden, types.ErrorCodeIdentityNotLinked, "identity is not linked to a local user", true
 	case errors.Is(err, types.ErrAccountInactive):
 		return http.StatusForbidden, types.ErrorCodeAccountInactive, "local account is inactive", true
-	case errors.Is(err, types.ErrActorRequired):
-		return http.StatusBadRequest, types.ErrorCodeInvalidActor, "X-Actor-User-ID header is required", true
-	case errors.Is(err, types.ErrInvalidActor):
-		return http.StatusBadRequest, types.ErrorCodeInvalidActor, "X-Actor-User-ID must contain one positive user id", true
-	case errors.Is(err, types.ErrActorInactive):
-		return http.StatusConflict, types.ErrorCodeActorInactive, "actor user is inactive", true
 	case errors.Is(err, types.ErrInvalidBorrowerID):
 		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "borrower_user_id must be a positive integer", true
 	case errors.Is(err, types.ErrBorrowerNotFound):

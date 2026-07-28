@@ -24,9 +24,6 @@ var (
 	ErrInvalidToken           = errors.New("invalid access token")
 	ErrForbidden              = errors.New("access is forbidden")
 	ErrAccountInactive        = errors.New("account is inactive")
-	ErrActorRequired          = errors.New("actor user id is required")
-	ErrInvalidActor           = errors.New("invalid actor user id")
-	ErrActorInactive          = errors.New("actor is inactive")
 	ErrInvalidBorrowerID      = errors.New("invalid borrower user id")
 	ErrBorrowerNotFound       = errors.New("borrower user not found")
 	ErrBorrowerInactive       = errors.New("borrower is inactive")
@@ -59,8 +56,6 @@ const (
 	ErrorCodeForbidden              = "forbidden"
 	ErrorCodeIdentityNotLinked      = "identity_not_linked"
 	ErrorCodeAccountInactive        = "account_inactive"
-	ErrorCodeInvalidActor           = "invalid_actor"
-	ErrorCodeActorInactive          = "actor_inactive"
 	ErrorCodeBorrowerInactive       = "borrower_inactive"
 	ErrorCodeCheckoutNotFound       = "checkout_not_found"
 	ErrorCodeItemNotAvailable       = "item_not_available"

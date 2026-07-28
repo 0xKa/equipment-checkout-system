@@ -4,10 +4,9 @@ A Go REST API for managing equipment, categories, local users, and transactional
 
 The development environment uses Docker Compose to run the API, its PostgreSQL
 database and Goose migrations, plus Keycloak with a separate PostgreSQL
-database. `GET /api/v1/me` authenticates Keycloak access tokens and resolves
-them to explicitly linked local users. Checkout and return mutations
-temporarily retain `X-Actor-User-ID` as development attribution until the
-full API authentication cutover.
+database. Every `/api/v1` route authenticates a Keycloak access token, resolves
+its external identity to an explicitly linked local user, and authorizes the
+operation with application capabilities derived from Keycloak client roles.
 
 ## Project structure
 
@@ -25,7 +24,7 @@ full API authentication cutover.
     │   ├── queries/      sqlc query definitions
     │   └── sqlcgen/      Generated database code
     ├── handlers/         HTTP request and response handling
-    ├── middleware/       HTTP safeguards and actor resolution
+    ├── middleware/       HTTP safeguards, authentication, and authorization
     ├── routes/           Route registration
     ├── services/         Business rules and database mapping
     ├── types/            Domain and API types
@@ -90,7 +89,35 @@ Compose uses Keycloak's internal service address while preserving the same
 public `OIDC_ISSUER_URL`. `/health` remains process-only and `/ready` remains
 database-only.
 
-During the Milestone 5 mixed mode, `GET /api/v1/me` requires exactly one
-`Authorization: Bearer <access-token>` credential. The checkout and return
-mutation routes still use the provisional actor header and must not be exposed
-as a production security boundary.
+## Authentication and current authorization
+
+Every `/api/v1` request requires exactly one
+`Authorization: Bearer <access-token>` credential. Use an access token issued
+for the `equipment-api` audience, not an ID token. `/health` and `/ready`
+remain public.
+
+The API verifies the token, resolves its exact `(issuer, subject)` identity to
+an active local user, and derives application capabilities from the
+`equipment-api` client roles:
+
+| Keycloak role | Current API access |
+| --- | --- |
+| `employee` | `/me` and item/category reads |
+| `auditor` | `/me`, item/category reads, and checkout-history reads |
+| `inventory_admin` | All current routes, including inventory mutations, local-user management, checkout, and return |
+
+Checkout and return are intentionally inventory-admin-only in Milestone 6.
+Milestone 7 adds the final self-service ownership rules. Client-supplied local
+user IDs are never an identity source and cannot override the token-derived
+actor.
+
+Local-user routes manage application profiles, not Keycloak credentials.
+`POST /api/v1/users` creates an unlinked local user, and profile or status
+updates never link an identity automatically. A user becomes login-capable
+only through an explicit reviewed `(issuer, subject)` link; username or email
+matches are not used for linking.
+
+The Postman collection applies `Bearer {{accessToken}}` to API requests at the
+collection level while explicitly leaving the health requests unauthenticated.
+Paste a current Keycloak access token into the `accessToken` collection
+variable before exercising `/api/v1`.

@@ -410,7 +410,7 @@ func validateCheckoutPagination(pagination types.PaginationRequest) error {
 func checkoutActor(ctx context.Context) (types.Actor, error) {
 	actor, ok := types.ActorFromContext(ctx)
 	if !ok {
-		return types.Actor{}, types.ErrActorRequired
+		return types.Actor{}, types.ErrAuthenticationRequired
 	}
 	return actor, nil
 }
@@ -488,7 +488,7 @@ func itemStatusAuditData(previousStatus, newStatus string) ([]byte, []byte, erro
 
 func mapCheckoutWorkflowError(ctx context.Context, operation string, err error) error {
 	switch {
-	case errors.Is(err, types.ErrActorRequired),
+	case errors.Is(err, types.ErrAuthenticationRequired),
 		errors.Is(err, types.ErrInvalidBorrowerID),
 		errors.Is(err, types.ErrBorrowerNotFound),
 		errors.Is(err, types.ErrBorrowerInactive),

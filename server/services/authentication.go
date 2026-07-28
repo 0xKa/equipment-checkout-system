@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 
 	"github.com/0xKa/equipment-checkout-system/server/types"
 )
@@ -75,9 +74,6 @@ func (s *authenticationService) Authenticate(
 	}
 
 	actor, err := s.identity.Resolve(ctx, identity.Issuer, identity.Subject)
-	if errors.Is(err, types.ErrActorInactive) {
-		return types.Actor{}, types.ErrAccountInactive
-	}
 	if err != nil {
 		return types.Actor{}, err
 	}

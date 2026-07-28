@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "62cff4fc-9e67-43c2-bdb1-18642a9452b0",
     "name": "Equipment Checkout API",
-    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. GET /api/v1/me requires a Keycloak access token. X-Actor-User-ID remains temporary development attribution only for checkout and return mutations.",
+    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. Every /api/v1 request inherits Bearer {{accessToken}} authentication; /health and /ready remain public.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -12,6 +12,9 @@
         {
           "name": "Get Health",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [
               {
@@ -36,6 +39,9 @@
         {
           "name": "Get Readiness",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [
               {
@@ -318,7 +324,7 @@
     },
     {
       "name": "Users and Authentication",
-      "description": "Manages local users and exercises the Milestone 5 bearer-authentication boundary. userId selects a managed user; accessToken must be a current Keycloak access token for an explicitly linked local user.",
+      "description": "Manages local application users and exercises the full bearer-authentication boundary. User management requires the users.manage capability. Creating or updating a local user does not create, update, or automatically link a Keycloak identity.",
       "item": [
         {
           "name": "Create User",
@@ -434,8 +440,7 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json", "type": "text" },
-              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+              { "key": "Accept", "value": "application/json", "type": "text" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/me",
@@ -450,7 +455,7 @@
     },
     {
       "name": "Checkouts",
-      "description": "Checkout and return mutations require X-Actor-User-ID for provisional attribution only. The header is spoofable and provides no authentication or authorization.",
+      "description": "Checkout history requires checkout.history.read_all. Checkout and return temporarily require checkout.manage until Milestone 7 adds self-service ownership rules. Workflow attribution always uses the token-derived local actor.",
       "item": [
         {
           "name": "Create Checkout",
@@ -458,8 +463,7 @@
             "method": "POST",
             "header": [
               { "key": "Accept", "value": "application/json", "type": "text" },
-              { "key": "Content-Type", "value": "application/json", "type": "text" },
-              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
@@ -536,15 +540,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json", "type": "text" },
-              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+              { "key": "Accept", "value": "application/json", "type": "text" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/checkouts/{{checkoutId}}/return",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "checkouts", "{{checkoutId}}", "return"]
             },
-            "description": "Returns an active checkout with 200, records actorUserId as the return recipient, and atomically restores the item to available."
+            "description": "Returns an active checkout with 200, records the token-derived actor as the return recipient, and atomically restores the item to available."
           },
           "response": []
         },
@@ -554,8 +557,7 @@
             "method": "POST",
             "header": [
               { "key": "Accept", "value": "application/json", "type": "text" },
-              { "key": "Content-Type", "value": "application/json", "type": "text" },
-              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
@@ -576,8 +578,7 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json", "type": "text" },
-              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+              { "key": "Accept", "value": "application/json", "type": "text" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/checkouts/{{checkoutId}}/return",
@@ -717,6 +718,16 @@
       ]
     }
   ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
   "variable": [
     {
       "key": "baseUrl",
@@ -736,11 +747,6 @@
     {
       "key": "userId",
       "value": "2",
-      "type": "string"
-    },
-    {
-      "key": "actorUserId",
-      "value": "1",
       "type": "string"
     },
     {

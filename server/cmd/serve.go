@@ -99,8 +99,6 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 
 	userService := services.NewUserService(queries)
 	userHandler := handlers.NewUsers(userService)
-	actorResolver := services.NewActorResolver(userService)
-	requireActor := middleware.RequireActor(actorResolver)
 	identityResolver := services.NewIdentityResolver(queries)
 	authenticationService := services.NewAuthenticationService(
 		tokenVerifier,
@@ -124,7 +122,6 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 		categoryHandler,
 		userHandler,
 		checkoutHandler,
-		requireActor,
 		requireBearer,
 	)
 
