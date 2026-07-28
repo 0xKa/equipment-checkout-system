@@ -6,8 +6,7 @@ SELECT 'equipment.admin', 'admin@example.test', 'Equipment Administrator'
 WHERE NOT EXISTS (
     SELECT 1
     FROM users
-    WHERE username = 'equipment.admin'
-      AND email = 'admin@example.test'
+    WHERE lower(btrim(username)) = 'equipment.admin'
 );
 
 INSERT INTO users (username, email, display_name)
@@ -15,8 +14,7 @@ SELECT 'sample.borrower', 'borrower@example.test', 'Sample Borrower'
 WHERE NOT EXISTS (
     SELECT 1
     FROM users
-    WHERE username = 'sample.borrower'
-      AND email = 'borrower@example.test'
+    WHERE lower(btrim(username)) = 'sample.borrower'
 );
 
 INSERT INTO users (username, email, display_name)
@@ -24,8 +22,7 @@ SELECT 'audit.viewer', 'audit@example.test', 'Audit Viewer'
 WHERE NOT EXISTS (
     SELECT 1
     FROM users
-    WHERE username = 'audit.viewer'
-      AND email = 'audit@example.test'
+    WHERE lower(btrim(username)) = 'audit.viewer'
 );
 
 INSERT INTO users (username, email, display_name)
@@ -33,11 +30,13 @@ SELECT 'maintenance.tech', 'technician@example.test', 'Maintenance Technician'
 WHERE NOT EXISTS (
     SELECT 1
     FROM users
-    WHERE username = 'maintenance.tech'
-      AND email = 'technician@example.test'
+    WHERE lower(btrim(username)) = 'maintenance.tech'
 );
 
--- Link only the exact intended development profiles to canonical Keycloak identities.
+-- Link only the exact intended development profiles to canonical Keycloak
+-- identities. A username-only match is intentionally insufficient: a JIT row
+-- is already linked by issuer/subject, while an unrelated local collision must
+-- remain unlinked for explicit review.
 UPDATE users
 SET
     identity_issuer = development_identities.identity_issuer,

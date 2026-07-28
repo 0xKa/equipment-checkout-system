@@ -17,6 +17,7 @@ Keycloak client roles.
 ├── compose.yaml          API, migration, PostgreSQL, and Keycloak services
 ├── keycloak/             Reproducible development realm and bootstrap script
 ├── postman/              Importable API collection
+├── scripts/              Safe local development utilities
 └── server/
     ├── cmd/              CLI commands and application wiring
     ├── config/           Environment configuration
@@ -33,7 +34,7 @@ Keycloak client roles.
     └── .env.example      Local configuration template
 ```
 
-## Development commands
+## Start the development environment
 
 Create the ignored local environment file:
 
@@ -41,19 +42,28 @@ Create the ignored local environment file:
 Copy-Item server/.env.example server/.env
 ```
 
-Run the complete Compose environment:
+Replace every example password in `server/.env`, then run the complete
+environment:
 
 ```text
 make compose-up
-make keycloak-up     # Keycloak and its PostgreSQL database only
-make keycloak-stop   # preserve Keycloak data
-make keycloak-reset CONFIRM=YES  # recreate only Keycloak data
-make seed-dev       # optional development data
-make compose-down
-make compose-down-volumes CONFIRM=YES  # delete all Compose volumes
 ```
 
-Run PostgreSQL in Compose and the API on the host:
+This builds the API, starts both PostgreSQL databases and Keycloak, applies
+Goose migrations, runs the development-user password bootstrap, and waits for
+API readiness. Load the repeatable sample application data when you want the
+canonical inventory, users, and checkout examples:
+
+```text
+make seed-dev
+```
+
+Seeding before the first representative-user login gives the canonical local
+sample profiles and IDs. Seeding remains safe after JIT login: an existing
+normalized username is not inserted again, and the seed never auto-links a
+username-only collision.
+
+Run PostgreSQL and Keycloak in Compose while developing the API on the host:
 
 ```text
 make db-up
@@ -62,20 +72,49 @@ make migrate-up
 make run
 ```
 
-Verify and maintain the project:
+Routine commands:
 
 ```text
-make test
+make verify
 make build
 make sqlc
 make migrate-status
 make migrate-down
+make keycloak-stop
+make compose-down
 ```
+
+`make verify` checks formatting and runs `go vet ./...` plus
+`go build ./...`. Automated Go authentication tests have not been authorized
+for the current checkpoint; `make test` remains available when running the
+test suite is explicitly requested.
 
 `make reset-dev CONFIRM=YES` deletes all application rows while preserving
 migration history. `make keycloak-reset CONFIRM=YES` deletes and recreates only
 the Keycloak PostgreSQL volume. `make compose-down-volumes CONFIRM=YES` deletes
-both application and Keycloak PostgreSQL volumes.
+both application and Keycloak PostgreSQL volumes. Review the exact target and
+use these destructive commands only when that data loss is intended.
+
+### Direct Docker fallback
+
+Use the Make targets above normally. If GNU Make is unavailable, the direct
+PowerShell equivalents for the common lifecycle are:
+
+```powershell
+docker compose --env-file server/.env up --detach --build --wait
+
+docker compose --env-file server/.env up --detach --wait keycloak-postgres keycloak
+docker compose --env-file server/.env run --rm --no-deps keycloak-bootstrap
+
+docker compose --env-file server/.env stop keycloak keycloak-postgres
+docker compose --env-file server/.env down
+```
+
+The first command is the direct equivalent of `make compose-up`. The two
+Keycloak startup commands must stay together so bootstrap failures are not
+silently ignored.
+
+## Keycloak development administration
 
 Keycloak imports the canonical development realm only when the `equipment`
 realm is absent. Normal startup skips an existing realm, so changes to
@@ -84,13 +123,96 @@ After reviewing an intentional realm change, run
 `make keycloak-reset CONFIRM=YES` to recreate only the Keycloak database and
 import the canonical realm again.
 
+Open the development Admin Console at
+`http://localhost:8081/admin`. Sign in to the `master` realm using
+`KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME` and
+`KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD` from the ignored `server/.env`, then switch
+to the `equipment` realm. Do not use the bootstrap administrator as an
+application user.
+
+The imported representative users are:
+
+| Username | `equipment-api` client role | Password variable |
+| --- | --- | --- |
+| `equipment.admin` | `inventory_admin` | `KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD` |
+| `sample.borrower` | `employee` | `KEYCLOAK_SAMPLE_BORROWER_PASSWORD` |
+| `audit.viewer` | `auditor` | `KEYCLOAK_AUDIT_VIEWER_PASSWORD` |
+
+The one-shot bootstrap sets only their development passwords. The realm JSON
+is the canonical source for their fixed subjects, client roles, scopes, and
+client configuration.
+
 The API validates OIDC configuration and checks the configured JWKS endpoint
 once during startup. Host execution uses `OIDC_JWKS_URL` from `server/.env`;
 Compose uses Keycloak's internal service address while preserving the same
 public `OIDC_ISSUER_URL`. `/health` remains process-only and `/ready` remains
 database-only.
 
-## Authentication and current authorization
+## Obtain a Postman access token
+
+Import
+`postman/Equipment Checkout API.postman_collection.json`, select the
+collection's Authorization tab, and configure OAuth 2.0:
+
+| Postman setting | Development value |
+| --- | --- |
+| Grant type | Authorization Code (With PKCE) |
+| Callback URL | `{{oidcCallbackUrl}}` |
+| Auth URL | `{{oidcAuthUrl}}` |
+| Access Token URL | `{{oidcTokenUrl}}` |
+| Client ID | `{{oidcClientId}}` |
+| Client secret | Leave empty; this is a public client |
+| Code challenge method | SHA-256 |
+| Scope | `{{oidcScope}}` |
+
+Use browser authorization, sign in as one representative user, and request the
+token. Copy only the access token into the local **Current value** of the
+collection's `accessToken` variable. Do not place tokens in Initial values,
+export them with the collection, commit them, or paste them into logs. Repeat
+with another representative user when exercising a different role.
+
+The collection applies `Bearer {{accessToken}}` to API requests and explicitly
+leaves `/health` and `/ready` unauthenticated.
+
+### Inspect safe token metadata
+
+To inspect an access token without echoing it or printing the complete claims
+document:
+
+```powershell
+.\scripts\inspect-access-token.ps1
+```
+
+The script prompts with hidden input and prints only issuer, subject, audience,
+authorized party, username, email-verification state, `equipment-api` roles,
+and expiry. This is inspection only; decoding a JWT does not validate it. The
+API remains the security boundary that verifies signature, algorithm, issuer,
+audience, subject, and lifetime.
+
+## Authenticated request flow
+
+```mermaid
+flowchart LR
+    A["HTTP /api/v1 request"] --> B["Parse exactly one Bearer credential"]
+    B --> C["Verify RS256 signature and standard claims using cached JWKS"]
+    C --> D["Map equipment-api roles to application capabilities"]
+    D --> E["Resolve exact issuer + subject"]
+    E --> F{"Linked local user?"}
+    F -- "yes" --> G["Require locally active profile"]
+    F -- "no" --> H["Safe JIT insert from trusted profile claims"]
+    H --> G
+    G --> I["Store local actor and capabilities in request context"]
+    I --> J["Route capability guard"]
+    J --> K["Handler and service"]
+    K --> L["Resource ownership / workflow checks"]
+    L --> M["Transactional SQL, history, and audit attribution"]
+```
+
+Keycloak authenticates the person and supplies signed claims. The application
+database remains authoritative for its local user ID, profile, activation
+state, ownership, workflow state, history, and audit records.
+
+## Authentication and authorization contract
 
 Every `/api/v1` request requires exactly one
 `Authorization: Bearer <access-token>` credential. Use an access token issued
@@ -118,6 +240,8 @@ only.
 The authenticated actor, borrower, and return recipient remain distinct.
 Client-supplied local user IDs are never an identity source and cannot
 override the token-derived actor used for history and audit attribution.
+`X-Actor-User-ID` has been removed from the runtime boundary and is ignored;
+sending it without a valid Bearer token returns `401`.
 
 Local-user routes manage application profiles, not Keycloak credentials.
 `POST /api/v1/users` still creates an unlinked borrower profile. An existing
@@ -140,7 +264,73 @@ link without overwriting the local username, email, display name, or
 implemented because the application has no current operational use for
 login-presence tracking.
 
-The Postman collection applies `Bearer {{accessToken}}` to API requests at the
-collection level while explicitly leaving the health requests unauthenticated.
-Paste a current Keycloak access token into the `accessToken` collection
-variable before exercising `/api/v1`.
+Authentication failures return `401` and a `WWW-Authenticate: Bearer` header.
+Valid authenticated actors lacking permission receive `403`. An employee
+request for another borrower's protected checkout may return `404` so the
+record's existence is not disclosed. All errors retain the standard
+`{ "error": { "code", "message", "request_id" } }` envelope.
+
+## Current API summary
+
+| Route group | Access |
+| --- | --- |
+| `GET /health`, `GET /ready` | Public |
+| Item/category reads | Employee, inventory administrator, auditor |
+| Item/category writes | Inventory administrator |
+| Local-user CRUD/status | Inventory administrator |
+| `GET /api/v1/me` | Any recognized application role |
+| Self checkout/return and own checkout list/get | Employee or inventory administrator |
+| On-behalf checkout/return | Inventory administrator |
+| All checkout list/get and item-wide history | Inventory administrator or auditor |
+
+The concrete routes and example bodies are available in the Postman
+collection. Success responses preserve the existing `{ "data": ... }`
+envelope, and checkout lists retain bounded `limit`/`offset` pagination.
+
+## Security verification record
+
+Executed checks, inspection-backed invariants, expected response envelopes, and
+the remaining manual acceptance matrix are recorded in
+[`docs/keycloak-security-verification.md`](docs/keycloak-security-verification.md).
+The record separates observed behavior from cases that have not yet been
+exercised.
+
+## Development limitations and production handoff
+
+The checked-in environment is intentionally development-only:
+
+- Keycloak runs with `start-dev` over loopback HTTP.
+- The Admin Console and OIDC endpoints share one local port.
+- Example secrets are read from an ignored `.env` file.
+- Realm import is create-once, not a deployment-time reconciliation system.
+- The API and both databases run as a single-host Compose topology.
+- There is no CI security matrix or automated Go auth test suite yet.
+- There is no rate limiter, centralized monitoring, backup automation, or
+  production incident/recovery procedure.
+
+Production requires a separate design and acceptance process for:
+
+- TLS and one stable HTTPS issuer;
+- explicit public and administrative hostnames;
+- trusted reverse-proxy and forwarded-header configuration;
+- private Keycloak administration and management interfaces;
+- external secret management;
+- an optimized Keycloak image and production-mode startup;
+- backup and restore for both PostgreSQL databases;
+- Keycloak clustering/high availability;
+- upgrade, rollback, and signing-key rotation procedures;
+- metrics, logs, alerting, and capacity planning;
+- rate limiting and abuse protection.
+
+The API validates JWTs locally with cached signing keys and does not call
+Keycloak on every request. Consequently, an ordinary access token can remain
+usable until its expiry after a session ends or a role changes. The
+development realm limits that window with a five-minute access-token lifetime;
+production revocation expectations require an explicit design.
+
+Official operational references:
+
+- [Keycloak production configuration](https://www.keycloak.org/server/configuration-production)
+- [Keycloak hostname configuration](https://www.keycloak.org/server/hostname)
+- [Keycloak reverse-proxy configuration](https://www.keycloak.org/server/reverseproxy)
+- [Postman Authorization Code with PKCE](https://learning.postman.com/docs/use/send-requests/authorization/oauth-20/)

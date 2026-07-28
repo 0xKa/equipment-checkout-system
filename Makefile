@@ -12,7 +12,7 @@ REQUIRED_DATABASE_VARIABLES := POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTG
 REQUIRED_KEYCLOAK_VARIABLES := KEYCLOAK_HTTP_PORT KEYCLOAK_POSTGRES_DB KEYCLOAK_POSTGRES_USER KEYCLOAK_POSTGRES_PASSWORD KEYCLOAK_POSTGRES_VOLUME_NAME KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD KEYCLOAK_SAMPLE_BORROWER_PASSWORD KEYCLOAK_AUDIT_VIEWER_PASSWORD
 REQUIRED_OIDC_VARIABLES := OIDC_ISSUER_URL OIDC_JWKS_URL OIDC_AUDIENCE OIDC_HTTP_TIMEOUT OIDC_CLOCK_SKEW
 
-.PHONY: check-db-env check-keycloak-env check-oidc-env compose-up keycloak-up keycloak-stop keycloak-reset db-up compose-down compose-down-volumes migrate-up migrate-down migrate-status seed-dev reset-dev sqlc test build run
+.PHONY: check-db-env check-keycloak-env check-oidc-env compose-up keycloak-up keycloak-stop keycloak-reset db-up compose-down compose-down-volumes migrate-up migrate-down migrate-status seed-dev reset-dev sqlc verify test build run
 
 # Validate that the environment file exists and contains every required database setting.
 check-db-env:
@@ -94,6 +94,16 @@ reset-dev: check-db-env
 # Generate pgx/v5-compatible Go code from the reviewed queries.
 sqlc:
 	@$(SQLC) generate -f server/sqlc.yaml
+
+# Run the routine non-test Go verification used by the current manual-security workflow.
+verify:
+	@unformatted="$$(gofmt -l server)"; \
+	if [ -n "$$unformatted" ]; then \
+		echo "These Go files require gofmt:"; \
+		echo "$$unformatted"; \
+		exit 1; \
+	fi
+	cd server && go vet ./... && go build ./...
 
 # Print a small message for quickly confirming that Make is working.
 hello:

@@ -39,6 +39,8 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.0
+    # Development only: production must use an optimized production-mode image,
+    # stable HTTPS hostnames, and a separately reviewed proxy/network design.
     command: start-dev --import-realm
     environment:
       KC_DB: postgres
@@ -52,8 +54,11 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME:?KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME is required}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD:?KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD is required}
     ports:
+      # Development Admin Console and OIDC endpoint; never publish this binding
+      # as the production Keycloak exposure model.
       - "127.0.0.1:${KEYCLOAK_HTTP_PORT:?KEYCLOAK_HTTP_PORT is required}:8080"
     expose:
+      # Management health is available only to the Compose network.
       - "9000"
     volumes:
       - ./keycloak/realms:/opt/keycloak/data/import:ro

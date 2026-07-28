@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "62cff4fc-9e67-43c2-bdb1-18642a9452b0",
     "name": "Equipment Checkout API",
-    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. Every /api/v1 request inherits Bearer {{accessToken}} authentication; /health and /ready remain public.",
+    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. Every /api/v1 request inherits Bearer {{accessToken}} authentication; /health and /ready remain public. Obtain a token with OAuth 2.0 Authorization Code (With PKCE), SHA-256, the oidcAuthUrl/oidcTokenUrl/oidcClientId/oidcCallbackUrl variables below, and scope \"openid profile email\". Leave client secret empty, authorize in the browser, and keep the resulting access token only in the local Current value of accessToken.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -752,6 +752,31 @@
     {
       "key": "accessToken",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "oidcAuthUrl",
+      "value": "http://localhost:8081/realms/equipment/protocol/openid-connect/auth",
+      "type": "string"
+    },
+    {
+      "key": "oidcTokenUrl",
+      "value": "http://localhost:8081/realms/equipment/protocol/openid-connect/token",
+      "type": "string"
+    },
+    {
+      "key": "oidcClientId",
+      "value": "equipment-postman",
+      "type": "string"
+    },
+    {
+      "key": "oidcCallbackUrl",
+      "value": "https://oauth.pstmn.io/v1/browser-callback",
+      "type": "string"
+    },
+    {
+      "key": "oidcScope",
+      "value": "openid profile email",
       "type": "string"
     },
     {
