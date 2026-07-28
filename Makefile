@@ -9,8 +9,9 @@ SQLC := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 -include $(ENV_FILE)
 
 REQUIRED_DATABASE_VARIABLES := POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_PORT DATABASE_URL
+REQUIRED_KEYCLOAK_VARIABLES := KEYCLOAK_HTTP_PORT KEYCLOAK_POSTGRES_DB KEYCLOAK_POSTGRES_USER KEYCLOAK_POSTGRES_PASSWORD KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD
 
-.PHONY: check-db-env compose-up db-up compose-down migrate-up migrate-down migrate-status seed-dev reset-dev sqlc
+.PHONY: check-db-env check-keycloak-env compose-up keycloak-up keycloak-stop db-up compose-down compose-down-volumes migrate-up migrate-down migrate-status seed-dev reset-dev sqlc
 
 # Validate that the environment file exists and contains every required database setting.
 check-db-env:
@@ -18,17 +19,36 @@ check-db-env:
 	$(foreach variable,$(REQUIRED_DATABASE_VARIABLES),$(if $(strip $($(variable))),,$(error $(variable) is missing from $(ENV_FILE))))
 	@echo Database configuration loaded from $(ENV_FILE).
 
-# Build and start PostgreSQL, apply migrations, and wait for the API to become ready.
-compose-up: check-db-env
+# Validate the Keycloak and dedicated Keycloak database settings.
+check-keycloak-env:
+	$(if $(wildcard $(ENV_FILE)),,$(error Missing $(ENV_FILE); copy server/.env.example and provide local Keycloak values))
+	$(foreach variable,$(REQUIRED_KEYCLOAK_VARIABLES),$(if $(strip $($(variable))),,$(error $(variable) is missing from $(ENV_FILE))))
+	@echo Keycloak configuration loaded from $(ENV_FILE).
+
+# Build and start the complete development environment and wait for healthy services.
+compose-up: check-db-env check-keycloak-env
 	docker compose --env-file $(ENV_FILE) up --detach --build --wait
+
+# Start only Keycloak and its dedicated PostgreSQL database.
+keycloak-up: check-db-env check-keycloak-env
+	docker compose --env-file $(ENV_FILE) up --detach --wait keycloak-postgres keycloak
+
+# Stop only Keycloak and its database without deleting their persistent volume.
+keycloak-stop: check-db-env check-keycloak-env
+	docker compose --env-file $(ENV_FILE) stop keycloak keycloak-postgres
 
 # Start only PostgreSQL for running the API directly on the host.
 db-up: check-db-env
 	docker compose --env-file $(ENV_FILE) up --detach --wait postgres
 
-# Stop the Compose project without removing its named volume, preserving local database data.
-compose-down: check-db-env
+# Stop the Compose project without removing its named volumes.
+compose-down: check-db-env check-keycloak-env
 	docker compose --env-file $(ENV_FILE) down
+
+# Stop the Compose project and delete its named and anonymous volumes after explicit confirmation.
+compose-down-volumes: check-db-env check-keycloak-env
+	$(if $(filter YES,$(CONFIRM)),,$(error Destructive command. Run: make compose-down-volumes CONFIRM=YES))
+	docker compose --env-file $(ENV_FILE) down --volumes
 
 # Apply every pending migration to the configured PostgreSQL database.
 migrate-up: check-db-env

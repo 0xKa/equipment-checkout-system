@@ -20,6 +20,61 @@ services:
       retries: 12
       start_period: 5s
 
+  keycloak-postgres:
+    image: postgres:17.10-alpine
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_POSTGRES_DB:?KEYCLOAK_POSTGRES_DB is required}
+      POSTGRES_USER: ${KEYCLOAK_POSTGRES_USER:?KEYCLOAK_POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${KEYCLOAK_POSTGRES_PASSWORD:?KEYCLOAK_POSTGRES_PASSWORD is required}
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready --username "$${POSTGRES_USER}" --dbname "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.0
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-postgres
+      KC_DB_URL_PORT: "5432"
+      KC_DB_URL_DATABASE: ${KEYCLOAK_POSTGRES_DB:?KEYCLOAK_POSTGRES_DB is required}
+      KC_DB_USERNAME: ${KEYCLOAK_POSTGRES_USER:?KEYCLOAK_POSTGRES_USER is required}
+      KC_DB_PASSWORD: ${KEYCLOAK_POSTGRES_PASSWORD:?KEYCLOAK_POSTGRES_PASSWORD is required}
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_HTTP_PORT:?KEYCLOAK_HTTP_PORT is required}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME:?KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME is required}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD:?KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${KEYCLOAK_HTTP_PORT:?KEYCLOAK_HTTP_PORT is required}:8080"
+    expose:
+      - "9000"
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          { printf 'HEAD /health/ready HTTP/1.0\r\n\r\n' >&0;
+          grep 'HTTP/1.0 200'; } 0<>/dev/tcp/127.0.0.1/9000
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   migrate:
     build:
       context: ./server
@@ -75,3 +130,4 @@ services:
 
 volumes:
   postgres_data:
+  keycloak_postgres_data:

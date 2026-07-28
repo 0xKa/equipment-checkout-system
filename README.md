@@ -2,14 +2,17 @@
 
 A Go REST API for managing equipment, categories, local users, and transactional checkout/return workflows with PostgreSQL persistence.
 
-The development environment uses Docker Compose to start PostgreSQL, apply Goose migrations, and run the API. Authentication and authorization are not implemented yet; `X-Actor-User-ID` is development attribution only.
+The development environment uses Docker Compose to run the API, its PostgreSQL
+database and Goose migrations, plus Keycloak with a separate PostgreSQL
+database. Authentication and authorization are not implemented yet;
+`X-Actor-User-ID` is development attribution only.
 
 ## Project structure
 
 ```text
 .
 ├── Makefile              Development commands
-├── compose.yaml          PostgreSQL, migration, and API services
+├── compose.yaml          API, migration, PostgreSQL, and Keycloak services
 ├── postman/              Importable API collection
 └── server/
     ├── cmd/              CLI commands and application wiring
@@ -39,8 +42,11 @@ Run the complete Compose environment:
 
 ```text
 make compose-up
+make keycloak-up     # Keycloak and its PostgreSQL database only
+make keycloak-stop   # preserve Keycloak data
 make seed-dev       # optional development data
 make compose-down
+make compose-down-volumes CONFIRM=YES  # delete all Compose volumes
 ```
 
 Run PostgreSQL in Compose and the API on the host:
@@ -61,4 +67,6 @@ make migrate-status
 make migrate-down
 ```
 
-`make reset-dev CONFIRM=YES` deletes all development data while preserving migration history.
+`make reset-dev CONFIRM=YES` deletes all application rows while preserving
+migration history. `make compose-down-volumes CONFIRM=YES` deletes both
+application and Keycloak PostgreSQL volumes.
