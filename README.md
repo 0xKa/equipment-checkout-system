@@ -5,8 +5,9 @@ A Go REST API for managing equipment, categories, local users, and transactional
 The development environment uses Docker Compose to run the API, its PostgreSQL
 database and Goose migrations, plus Keycloak with a separate PostgreSQL
 database. Every `/api/v1` route authenticates a Keycloak access token, resolves
-its external identity to an explicitly linked local user, and authorizes the
-operation with application capabilities derived from Keycloak client roles.
+its exact external identity to an existing or safely JIT-provisioned local
+user, and authorizes the operation with application capabilities derived from
+Keycloak client roles.
 
 ## Project structure
 
@@ -119,10 +120,25 @@ Client-supplied local user IDs are never an identity source and cannot
 override the token-derived actor used for history and audit attribution.
 
 Local-user routes manage application profiles, not Keycloak credentials.
-`POST /api/v1/users` creates an unlinked local user, and profile or status
-updates never link an identity automatically. A user becomes login-capable
-only through an explicit reviewed `(issuer, subject)` link; username or email
-matches are not used for linking.
+`POST /api/v1/users` still creates an unlinked borrower profile. An existing
+unlinked row never becomes login-capable through a username or email match; it
+requires an explicit reviewed `(issuer, subject)` link.
+
+For a previously unseen Keycloak identity, the first valid token with a
+recognized application role provisions one active local profile. The exact
+`(issuer, subject)` pair is the identity key. `preferred_username` is required,
+`name` initializes the display name with a username fallback, and email is
+stored only when `email_verified=true`. A normalized username or email
+collision returns `403 identity_conflict` and never attaches the identity to
+the existing row. Missing or invalid required profile data returns
+`403 identity_profile_invalid`.
+
+Token profile claims initialize a JIT row only. Later logins reuse the exact
+link without overwriting the local username, email, display name, or
+`is_active`; a locally inactive linked account receives
+`403 account_inactive`. The optional `last_seen_at` field is intentionally not
+implemented because the application has no current operational use for
+login-presence tracking.
 
 The Postman collection applies `Bearer {{accessToken}}` to API requests at the
 collection level while explicitly leaving the health requests unauthenticated.

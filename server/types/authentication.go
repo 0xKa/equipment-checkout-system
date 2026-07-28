@@ -3,9 +3,13 @@ package types
 // VerifiedIdentity contains only the trusted claims needed after token
 // verification.
 type VerifiedIdentity struct {
-	Issuer  string
-	Subject string
-	Roles   []string
+	Issuer            string
+	Subject           string
+	Roles             []string
+	PreferredUsername string
+	Name              string
+	Email             string
+	EmailVerified     bool
 }
 
 // Capability is an application permission derived from trusted identity roles.

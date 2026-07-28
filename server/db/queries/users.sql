@@ -19,6 +19,31 @@ RETURNING
     identity_issuer,
     external_subject;
 
+-- name: CreateUserWithExternalIdentity :one
+INSERT INTO users (
+    username,
+    email,
+    display_name,
+    identity_issuer,
+    external_subject
+) VALUES (
+    sqlc.arg(username),
+    sqlc.narg(email),
+    sqlc.arg(display_name),
+    sqlc.arg(identity_issuer),
+    sqlc.arg(external_subject)
+)
+RETURNING
+    id,
+    username,
+    email,
+    display_name,
+    is_active,
+    created_at,
+    updated_at,
+    identity_issuer,
+    external_subject;
+
 -- name: ListUsers :many
 SELECT
     id,

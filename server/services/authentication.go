@@ -37,7 +37,7 @@ type TokenVerifier interface {
 }
 
 type AuthenticationService interface {
-	// Authenticates a token as a linked, active local application actor.
+	// Authenticates a token as an active existing or JIT-provisioned actor.
 	Authenticate(ctx context.Context, rawToken string) (types.Actor, error)
 }
 
@@ -73,7 +73,7 @@ func (s *authenticationService) Authenticate(
 		return types.Actor{}, types.ErrForbidden
 	}
 
-	actor, err := s.identity.Resolve(ctx, identity.Issuer, identity.Subject)
+	actor, err := s.identity.Resolve(ctx, identity)
 	if err != nil {
 		return types.Actor{}, err
 	}

@@ -144,8 +144,10 @@ func serviceError(err error) (int, string, string, bool) {
 		return http.StatusUnauthorized, types.ErrorCodeInvalidToken, "access token is invalid", true
 	case errors.Is(err, types.ErrForbidden):
 		return http.StatusForbidden, types.ErrorCodeForbidden, "access is forbidden", true
-	case errors.Is(err, types.ErrIdentityNotLinked):
-		return http.StatusForbidden, types.ErrorCodeIdentityNotLinked, "identity is not linked to a local user", true
+	case errors.Is(err, types.ErrIdentityConflict):
+		return http.StatusForbidden, types.ErrorCodeIdentityConflict, "identity profile conflicts with an existing local user", true
+	case errors.Is(err, types.ErrIdentityProfileInvalid):
+		return http.StatusForbidden, types.ErrorCodeIdentityProfileInvalid, "identity profile cannot provision a local user", true
 	case errors.Is(err, types.ErrAccountInactive):
 		return http.StatusForbidden, types.ErrorCodeAccountInactive, "local account is inactive", true
 	case errors.Is(err, types.ErrInvalidBorrowerID):

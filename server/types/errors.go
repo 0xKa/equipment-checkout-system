@@ -19,7 +19,8 @@ var (
 	ErrUserNotFound           = errors.New("user not found")
 	ErrUsernameConflict       = errors.New("username already exists")
 	ErrUserEmailConflict      = errors.New("user email already exists")
-	ErrIdentityNotLinked      = errors.New("external identity is not linked")
+	ErrIdentityConflict       = errors.New("identity profile conflicts with an existing local user")
+	ErrIdentityProfileInvalid = errors.New("identity profile cannot provision a local user")
 	ErrAuthenticationRequired = errors.New("authentication is required")
 	ErrInvalidToken           = errors.New("invalid access token")
 	ErrForbidden              = errors.New("access is forbidden")
@@ -54,7 +55,8 @@ const (
 	ErrorCodeAuthenticationRequired = "authentication_required"
 	ErrorCodeInvalidToken           = "invalid_token"
 	ErrorCodeForbidden              = "forbidden"
-	ErrorCodeIdentityNotLinked      = "identity_not_linked"
+	ErrorCodeIdentityConflict       = "identity_conflict"
+	ErrorCodeIdentityProfileInvalid = "identity_profile_invalid"
 	ErrorCodeAccountInactive        = "account_inactive"
 	ErrorCodeBorrowerInactive       = "borrower_inactive"
 	ErrorCodeCheckoutNotFound       = "checkout_not_found"

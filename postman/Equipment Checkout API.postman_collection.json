@@ -324,7 +324,7 @@
     },
     {
       "name": "Users and Authentication",
-      "description": "Manages local application users and exercises the full bearer-authentication boundary. User management requires the users.manage capability. Creating or updating a local user does not create, update, or automatically link a Keycloak identity.",
+      "description": "Manages local application users and exercises bearer authentication plus safe JIT provisioning. User management requires users.manage. Local POST/PUT operations never manage Keycloak credentials or auto-link by username/email. A previously unseen valid Keycloak identity may create one linked local profile; collisions fail with identity_conflict.",
       "item": [
         {
           "name": "Create User",
@@ -447,7 +447,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "me"]
             },
-            "description": "Verifies the Keycloak access token, resolves its exact issuer and subject to an active linked local user, and returns the unchanged local user response."
+            "description": "Verifies the Keycloak access token and resolves its exact issuer/subject. A previously unseen identity with a recognized role and valid preferred_username is provisioned once; later requests reuse the local profile without synchronizing token claims."
           },
           "response": []
         }

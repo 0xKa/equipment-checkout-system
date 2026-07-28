@@ -95,17 +95,25 @@ func (v *oidcTokenVerifier) Verify(
 	}
 
 	return types.VerifiedIdentity{
-		Issuer:  token.Issuer,
-		Subject: token.Subject,
-		Roles:   roles,
+		Issuer:            token.Issuer,
+		Subject:           token.Subject,
+		Roles:             roles,
+		PreferredUsername: claims.PreferredUsername,
+		Name:              claims.Name,
+		Email:             claims.Email,
+		EmailVerified:     claims.EmailVerified,
 	}, nil
 }
 
 type accessTokenClaims struct {
-	ExpiresAt      json.RawMessage `json:"exp"`
-	NotBefore      json.RawMessage `json:"nbf"`
-	IssuedAt       json.RawMessage `json:"iat"`
-	ResourceAccess json.RawMessage `json:"resource_access"`
+	ExpiresAt         json.RawMessage `json:"exp"`
+	NotBefore         json.RawMessage `json:"nbf"`
+	IssuedAt          json.RawMessage `json:"iat"`
+	ResourceAccess    json.RawMessage `json:"resource_access"`
+	PreferredUsername string          `json:"preferred_username"`
+	Name              string          `json:"name"`
+	Email             string          `json:"email"`
+	EmailVerified     bool            `json:"email_verified"`
 }
 
 func validTemporalClaims(

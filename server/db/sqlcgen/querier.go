@@ -21,6 +21,7 @@ type Querier interface {
 	CreateCheckout(ctx context.Context, arg CreateCheckoutParams) (Checkout, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateUserWithExternalIdentity(ctx context.Context, arg CreateUserWithExternalIdentityParams) (User, error)
 	DeleteCategory(ctx context.Context, id int64) (int64, error)
 	DeleteItem(ctx context.Context, id int64) (int64, error)
 	GetCategory(ctx context.Context, id int64) (Category, error)

@@ -54,6 +54,63 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const createUserWithExternalIdentity = `-- name: CreateUserWithExternalIdentity :one
+INSERT INTO users (
+    username,
+    email,
+    display_name,
+    identity_issuer,
+    external_subject
+) VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5
+)
+RETURNING
+    id,
+    username,
+    email,
+    display_name,
+    is_active,
+    created_at,
+    updated_at,
+    identity_issuer,
+    external_subject
+`
+
+type CreateUserWithExternalIdentityParams struct {
+	Username        string
+	Email           *string
+	DisplayName     string
+	IdentityIssuer  *string
+	ExternalSubject *string
+}
+
+func (q *Queries) CreateUserWithExternalIdentity(ctx context.Context, arg CreateUserWithExternalIdentityParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUserWithExternalIdentity,
+		arg.Username,
+		arg.Email,
+		arg.DisplayName,
+		arg.IdentityIssuer,
+		arg.ExternalSubject,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.DisplayName,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT
     id,
