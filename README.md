@@ -13,6 +13,7 @@ database. Authentication and authorization are not implemented yet;
 .
 ├── Makefile              Development commands
 ├── compose.yaml          API, migration, PostgreSQL, and Keycloak services
+├── keycloak/             Reproducible development realm and bootstrap script
 ├── postman/              Importable API collection
 └── server/
     ├── cmd/              CLI commands and application wiring
@@ -44,6 +45,7 @@ Run the complete Compose environment:
 make compose-up
 make keycloak-up     # Keycloak and its PostgreSQL database only
 make keycloak-stop   # preserve Keycloak data
+make keycloak-reset CONFIRM=YES  # recreate only Keycloak data
 make seed-dev       # optional development data
 make compose-down
 make compose-down-volumes CONFIRM=YES  # delete all Compose volumes
@@ -68,5 +70,13 @@ make migrate-down
 ```
 
 `make reset-dev CONFIRM=YES` deletes all application rows while preserving
-migration history. `make compose-down-volumes CONFIRM=YES` deletes both
-application and Keycloak PostgreSQL volumes.
+migration history. `make keycloak-reset CONFIRM=YES` deletes and recreates only
+the Keycloak PostgreSQL volume. `make compose-down-volumes CONFIRM=YES` deletes
+both application and Keycloak PostgreSQL volumes.
+
+Keycloak imports the canonical development realm only when the `equipment`
+realm is absent. Normal startup skips an existing realm, so changes to
+`keycloak/realms/equipment-realm.json` do not update previously imported data.
+After reviewing an intentional realm change, run
+`make keycloak-reset CONFIRM=YES` to recreate only the Keycloak database and
+import the canonical realm again.
