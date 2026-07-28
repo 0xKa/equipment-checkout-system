@@ -110,7 +110,7 @@ func (h *Users) SetStatus(c *echo.Context) error {
 func (h *Users) Me(c *echo.Context) error {
 	actor, ok := types.ActorFromContext(c.Request().Context())
 	if !ok {
-		return writeServiceError(c, types.ErrActorRequired)
+		return writeServiceError(c, types.ErrAuthenticationRequired)
 	}
 
 	return c.JSON(http.StatusOK, types.UserResponse{Data: actor.User})

@@ -4,8 +4,10 @@ A Go REST API for managing equipment, categories, local users, and transactional
 
 The development environment uses Docker Compose to run the API, its PostgreSQL
 database and Goose migrations, plus Keycloak with a separate PostgreSQL
-database. Authentication and authorization are not implemented yet;
-`X-Actor-User-ID` is development attribution only.
+database. `GET /api/v1/me` authenticates Keycloak access tokens and resolves
+them to explicitly linked local users. Checkout and return mutations
+temporarily retain `X-Actor-User-ID` as development attribution until the
+full API authentication cutover.
 
 ## Project structure
 
@@ -55,6 +57,7 @@ Run PostgreSQL in Compose and the API on the host:
 
 ```text
 make db-up
+make keycloak-up
 make migrate-up
 make run
 ```
@@ -80,3 +83,14 @@ realm is absent. Normal startup skips an existing realm, so changes to
 After reviewing an intentional realm change, run
 `make keycloak-reset CONFIRM=YES` to recreate only the Keycloak database and
 import the canonical realm again.
+
+The API validates OIDC configuration and checks the configured JWKS endpoint
+once during startup. Host execution uses `OIDC_JWKS_URL` from `server/.env`;
+Compose uses Keycloak's internal service address while preserving the same
+public `OIDC_ISSUER_URL`. `/health` remains process-only and `/ready` remains
+database-only.
+
+During the Milestone 5 mixed mode, `GET /api/v1/me` requires exactly one
+`Authorization: Bearer <access-token>` credential. The checkout and return
+mutation routes still use the provisional actor header and must not be exposed
+as a production security boundary.

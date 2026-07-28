@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "62cff4fc-9e67-43c2-bdb1-18642a9452b0",
     "name": "Equipment Checkout API",
-    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL, apply migrations, and wait for readiness. Seed data remains optional and explicit. Item, category, and local user data persists across API restarts. X-Actor-User-ID is provisional attribution only and is not authentication.",
+    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. GET /api/v1/me requires a Keycloak access token. X-Actor-User-ID remains temporary development attribution only for checkout and return mutations.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -317,8 +317,8 @@
       ]
     },
     {
-      "name": "Users and Provisional Actor",
-      "description": "Manages local users and exercises the spoofable pre-auth actor boundary. userId selects a managed user; actorUserId must identify an active local user.",
+      "name": "Users and Authentication",
+      "description": "Manages local users and exercises the Milestone 5 bearer-authentication boundary. userId selects a managed user; accessToken must be a current Keycloak access token for an explicitly linked local user.",
       "item": [
         {
           "name": "Create User",
@@ -430,19 +430,19 @@
           "response": []
         },
         {
-          "name": "Get Current Provisional Actor",
+          "name": "Get Current Authenticated User",
           "request": {
             "method": "GET",
             "header": [
               { "key": "Accept", "value": "application/json", "type": "text" },
-              { "key": "X-Actor-User-ID", "value": "{{actorUserId}}", "type": "text" }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/me",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "me"]
             },
-            "description": "Resolves actorUserId to an existing active user. This header is spoofable attribution, not authentication or authorization."
+            "description": "Verifies the Keycloak access token, resolves its exact issuer and subject to an active linked local user, and returns the unchanged local user response."
           },
           "response": []
         }
@@ -741,6 +741,11 @@
     {
       "key": "actorUserId",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
       "type": "string"
     },
     {

@@ -483,6 +483,8 @@
     {
       "id": "e6549747-b961-4b7f-8b7d-dd894bca6d75",
       "username": "equipment.admin",
+      "firstName": "Equipment",
+      "lastName": "Administrator",
       "email": "admin@example.test",
       "emailVerified": false,
       "enabled": true,
@@ -494,6 +496,8 @@
     {
       "id": "65b693e8-4199-452b-8277-ae9fd2264ac3",
       "username": "sample.borrower",
+      "firstName": "Sample",
+      "lastName": "Borrower",
       "email": "borrower@example.test",
       "emailVerified": false,
       "enabled": true,
@@ -505,6 +509,8 @@
     {
       "id": "16c37149-7558-454f-94c1-73ca1e337541",
       "username": "audit.viewer",
+      "firstName": "Audit",
+      "lastName": "Viewer",
       "email": "audit@example.test",
       "emailVerified": false,
       "enabled": true,

@@ -10,8 +10,9 @@ SQLC := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 
 REQUIRED_DATABASE_VARIABLES := POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_PORT DATABASE_URL
 REQUIRED_KEYCLOAK_VARIABLES := KEYCLOAK_HTTP_PORT KEYCLOAK_POSTGRES_DB KEYCLOAK_POSTGRES_USER KEYCLOAK_POSTGRES_PASSWORD KEYCLOAK_POSTGRES_VOLUME_NAME KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD KEYCLOAK_SAMPLE_BORROWER_PASSWORD KEYCLOAK_AUDIT_VIEWER_PASSWORD
+REQUIRED_OIDC_VARIABLES := OIDC_ISSUER_URL OIDC_JWKS_URL OIDC_AUDIENCE OIDC_HTTP_TIMEOUT OIDC_CLOCK_SKEW
 
-.PHONY: check-db-env check-keycloak-env compose-up keycloak-up keycloak-stop keycloak-reset db-up compose-down compose-down-volumes migrate-up migrate-down migrate-status seed-dev reset-dev sqlc
+.PHONY: check-db-env check-keycloak-env check-oidc-env compose-up keycloak-up keycloak-stop keycloak-reset db-up compose-down compose-down-volumes migrate-up migrate-down migrate-status seed-dev reset-dev sqlc test build run
 
 # Validate that the environment file exists and contains every required database setting.
 check-db-env:
@@ -25,10 +26,15 @@ check-keycloak-env:
 	$(foreach variable,$(REQUIRED_KEYCLOAK_VARIABLES),$(if $(strip $($(variable))),,$(error $(variable) is missing from $(ENV_FILE))))
 	@echo Keycloak configuration loaded from $(ENV_FILE).
 
+# Validate the host API's OIDC resource-server settings.
+check-oidc-env:
+	$(if $(wildcard $(ENV_FILE)),,$(error Missing $(ENV_FILE); copy server/.env.example and provide local OIDC values))
+	$(foreach variable,$(REQUIRED_OIDC_VARIABLES),$(if $(strip $($(variable))),,$(error $(variable) is missing from $(ENV_FILE))))
+	@echo OIDC configuration loaded from $(ENV_FILE).
+
 # Build and start the complete development environment and wait for healthy services.
-compose-up: check-db-env check-keycloak-env
+compose-up: check-db-env check-keycloak-env check-oidc-env
 	docker compose --env-file $(ENV_FILE) up --detach --build --wait
-	docker compose --env-file $(ENV_FILE) run --rm --no-deps keycloak-bootstrap
 
 # Start only Keycloak and its dedicated PostgreSQL database.
 keycloak-up: check-db-env check-keycloak-env
@@ -102,5 +108,5 @@ build:
 	cd server && go build ./...
 
 # Start the API server locally through its serve command.
-run:
+run: check-db-env check-oidc-env
 	cd server && go run . serve

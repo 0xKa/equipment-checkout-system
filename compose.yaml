@@ -79,8 +79,6 @@ services:
 
   keycloak-bootstrap:
     image: quay.io/keycloak/keycloak:26.7.0
-    profiles:
-      - bootstrap
     entrypoint:
       - /bin/bash
       - /opt/keycloak/bootstrap/bootstrap-development-users.sh
@@ -134,12 +132,19 @@ services:
       DB_MAX_CONNECTIONS: ${DB_MAX_CONNECTIONS:-10}
       DB_MIN_CONNECTIONS: ${DB_MIN_CONNECTIONS:-1}
       DB_MAX_CONNECTION_LIFETIME: ${DB_MAX_CONNECTION_LIFETIME:-30m}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:?OIDC_ISSUER_URL is required}
+      OIDC_JWKS_URL: http://keycloak:8080/realms/equipment/protocol/openid-connect/certs
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-equipment-api}
+      OIDC_HTTP_TIMEOUT: ${OIDC_HTTP_TIMEOUT:-5s}
+      OIDC_CLOCK_SKEW: ${OIDC_CLOCK_SKEW:-30s}
     ports:
       - "${HTTP_PORT:-8080}:${HTTP_PORT:-8080}"
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      keycloak-bootstrap:
         condition: service_completed_successfully
     healthcheck:
       test:

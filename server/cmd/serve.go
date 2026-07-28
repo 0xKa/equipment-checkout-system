@@ -53,6 +53,26 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 		}
 	}()
 
+	oidcContext, cancelOIDCStartup := context.WithTimeout(
+		context.Background(),
+		cfg.OIDCHTTPTimeout,
+	)
+	tokenVerifier, err := services.NewOIDCTokenVerifier(
+		oidcContext,
+		services.OIDCVerifierConfig{
+			IssuerURL:   cfg.OIDCIssuerURL,
+			JWKSURL:     cfg.OIDCJWKSURL,
+			Audience:    cfg.OIDCAudience,
+			HTTPTimeout: cfg.OIDCHTTPTimeout,
+			ClockSkew:   cfg.OIDCClockSkew,
+		},
+	)
+	cancelOIDCStartup()
+	if err != nil {
+		log.Error("OIDC startup failed", zap.Error(err))
+		return fmt.Errorf("initialize OIDC verifier: %w", err)
+	}
+
 	databaseContext, cancelDatabaseStartup := context.WithTimeout(
 		context.Background(),
 		databaseStartupTimeout,
@@ -81,6 +101,12 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	userHandler := handlers.NewUsers(userService)
 	actorResolver := services.NewActorResolver(userService)
 	requireActor := middleware.RequireActor(actorResolver)
+	identityResolver := services.NewIdentityResolver(queries)
+	authenticationService := services.NewAuthenticationService(
+		tokenVerifier,
+		identityResolver,
+	)
+	requireBearer := middleware.RequireBearer(authenticationService)
 
 	transactionManager := db.NewTransactionManager(pool, queries)
 	checkoutService := services.NewCheckoutService(queries, transactionManager)
@@ -99,6 +125,7 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 		userHandler,
 		checkoutHandler,
 		requireActor,
+		requireBearer,
 	)
 
 	address := cfg.HTTPAddress()

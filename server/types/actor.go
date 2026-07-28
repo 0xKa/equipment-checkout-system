@@ -4,7 +4,8 @@ import "context"
 
 // Actor represents the active local user performing an attributed operation.
 type Actor struct {
-	User User
+	User         User
+	Capabilities CapabilitySet
 }
 
 type actorContextKey struct{}

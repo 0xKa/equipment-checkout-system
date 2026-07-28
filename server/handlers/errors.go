@@ -35,6 +35,8 @@ func handleHTTPError(c *echo.Context, err error, log *zap.Logger) {
 		return
 	}
 
+	setAuthenticationChallenge(c, err)
+
 	if status, code, message, ok := serviceError(err); ok {
 		if writeErr := writeAPIError(c, status, code, message); writeErr != nil {
 			log.Error("write HTTP error response", zap.Error(writeErr))
@@ -136,6 +138,16 @@ func serviceError(err error) (int, string, string, bool) {
 		return http.StatusConflict, types.ErrorCodeUsernameConflict, "username already exists", true
 	case errors.Is(err, types.ErrUserEmailConflict):
 		return http.StatusConflict, types.ErrorCodeUserEmailConflict, "email already exists", true
+	case errors.Is(err, types.ErrAuthenticationRequired):
+		return http.StatusUnauthorized, types.ErrorCodeAuthenticationRequired, "authentication is required", true
+	case errors.Is(err, types.ErrInvalidToken):
+		return http.StatusUnauthorized, types.ErrorCodeInvalidToken, "access token is invalid", true
+	case errors.Is(err, types.ErrForbidden):
+		return http.StatusForbidden, types.ErrorCodeForbidden, "access is forbidden", true
+	case errors.Is(err, types.ErrIdentityNotLinked):
+		return http.StatusForbidden, types.ErrorCodeIdentityNotLinked, "identity is not linked to a local user", true
+	case errors.Is(err, types.ErrAccountInactive):
+		return http.StatusForbidden, types.ErrorCodeAccountInactive, "local account is inactive", true
 	case errors.Is(err, types.ErrActorRequired):
 		return http.StatusBadRequest, types.ErrorCodeInvalidActor, "X-Actor-User-ID header is required", true
 	case errors.Is(err, types.ErrInvalidActor):
@@ -164,6 +176,18 @@ func serviceError(err error) (int, string, string, bool) {
 		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "limit must be between 1 and 100 and offset must be a nonnegative integer", true
 	default:
 		return 0, "", "", false
+	}
+}
+
+func setAuthenticationChallenge(c *echo.Context, err error) {
+	switch {
+	case errors.Is(err, types.ErrAuthenticationRequired):
+		c.Response().Header().Set(echo.HeaderWWWAuthenticate, "Bearer")
+	case errors.Is(err, types.ErrInvalidToken):
+		c.Response().Header().Set(
+			echo.HeaderWWWAuthenticate,
+			`Bearer error="invalid_token"`,
+		)
 	}
 }
 

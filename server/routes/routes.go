@@ -16,6 +16,7 @@ func Register(
 	userHandler *handlers.Users,
 	checkoutHandler *handlers.Checkouts,
 	requireActor echo.MiddlewareFunc,
+	requireBearer echo.MiddlewareFunc,
 ) {
 	e.GET("/health", healthHandler.Get)
 	e.GET("/ready", healthHandler.Ready)
@@ -50,5 +51,5 @@ func Register(
 	checkouts.GET("/:id", checkoutHandler.Get)
 	checkouts.POST("/:id/return", checkoutHandler.Return, requireActor)
 
-	v1.GET("/me", userHandler.Me, requireActor)
+	v1.GET("/me", userHandler.Me, requireBearer)
 }
