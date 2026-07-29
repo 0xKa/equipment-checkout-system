@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "62cff4fc-9e67-43c2-bdb1-18642a9452b0",
     "name": "Equipment Checkout API",
-    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. Every /api/v1 request inherits Bearer {{accessToken}} authentication; /health and /ready remain public. Obtain a token with OAuth 2.0 Authorization Code (With PKCE), SHA-256, the oidcAuthUrl/oidcTokenUrl/oidcClientId/oidcCallbackUrl variables below, and scope \"openid profile email\". Leave client secret empty, authorize in the browser, and keep the resulting access token only in the local Current value of accessToken.",
+    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. Every /api/v1 request inherits the collection's preconfigured OAuth 2.0 Authorization Code (With PKCE) authentication; /health and /ready remain public. In the collection Authorization tab, select Get New Access Token, sign in through the browser, then select Proceed and Use Token. The public client has no client secret. Keep generated tokens local: do not share, sync, export, commit, or paste them into logs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -719,11 +719,91 @@
     }
   ],
   "auth": {
-    "type": "bearer",
-    "bearer": [
+    "type": "oauth2",
+    "oauth2": [
       {
-        "key": "token",
-        "value": "{{accessToken}}",
+        "key": "refreshRequestParams",
+        "value": [],
+        "type": "any"
+      },
+      {
+        "key": "tokenRequestParams",
+        "value": [],
+        "type": "any"
+      },
+      {
+        "key": "authRequestParams",
+        "value": [],
+        "type": "any"
+      },
+      {
+        "key": "tokenName",
+        "value": "Equipment Checkout Keycloak",
+        "type": "string"
+      },
+      {
+        "key": "credentialsId",
+        "value": "credentials",
+        "type": "string"
+      },
+      {
+        "key": "challengeAlgorithm",
+        "value": "S256",
+        "type": "string"
+      },
+      {
+        "key": "scope",
+        "value": "{{oidcScope}}",
+        "type": "string"
+      },
+      {
+        "key": "redirect_uri",
+        "value": "{{oidcCallbackUrl}}",
+        "type": "string"
+      },
+      {
+        "key": "grant_type",
+        "value": "authorization_code_with_pkce",
+        "type": "string"
+      },
+      {
+        "key": "clientSecret",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "clientId",
+        "value": "{{oidcClientId}}",
+        "type": "string"
+      },
+      {
+        "key": "useBrowser",
+        "value": true,
+        "type": "boolean"
+      },
+      {
+        "key": "authUrl",
+        "value": "{{oidcAuthUrl}}",
+        "type": "string"
+      },
+      {
+        "key": "addTokenTo",
+        "value": "header",
+        "type": "string"
+      },
+      {
+        "key": "headerPrefix",
+        "value": "Bearer",
+        "type": "string"
+      },
+      {
+        "key": "client_authentication",
+        "value": "body",
+        "type": "string"
+      },
+      {
+        "key": "accessTokenUrl",
+        "value": "{{oidcTokenUrl}}",
         "type": "string"
       }
     ]
@@ -747,11 +827,6 @@
     {
       "key": "userId",
       "value": "2",
-      "type": "string"
-    },
-    {
-      "key": "accessToken",
-      "value": "",
       "type": "string"
     },
     {

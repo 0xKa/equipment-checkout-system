@@ -1,0 +1,549 @@
+opencollection: 1.0.0
+info:
+  name: Equipment Checkout API
+bundled: true
+request:
+  auth:
+    type: oauth2
+    flow: authorization_code
+    authorizationUrl: "{{oidcAuthUrl}}"
+    accessTokenUrl: "{{oidcTokenUrl}}"
+    callbackUrl: "{{oidcCallbackUrl}}"
+    credentials:
+      clientId: "{{oidcClientId}}"
+      clientSecret: ""
+      placement: body
+    scope: "{{oidcScope}}"
+    pkce:
+      method: S256
+    tokenConfig:
+      id: credentials
+      placement:
+        header: Bearer
+    settings:
+      autoFetchToken: false
+      autoRefreshToken: false
+  variables:
+    - name: baseUrl
+      value: "http://localhost:8080"
+    - name: itemId
+      value: "1"
+    - name: categoryId
+      value: "1"
+    - name: userId
+      value: "2"
+    - name: oidcAuthUrl
+      value: "http://localhost:8081/realms/equipment/protocol/openid-connect/auth"
+    - name: oidcTokenUrl
+      value: "http://localhost:8081/realms/equipment/protocol/openid-connect/token"
+    - name: oidcClientId
+      value: "equipment-postman"
+    - name: oidcCallbackUrl
+      value: "https://oauth.pstmn.io/v1/browser-callback"
+    - name: oidcScope
+      value: "openid profile email"
+    - name: borrowerUserId
+      value: "2"
+    - name: checkoutId
+      value: "1"
+    - name: checkoutLimit
+      value: "50"
+    - name: checkoutOffset
+      value: "0"
+docs:
+  type: text/markdown
+  content: |-
+    Postman and OpenCollection definitions for the PostgreSQL-backed Equipment
+    Checkout API. Run `make compose-up` to build the API, start PostgreSQL and
+    Keycloak, apply migrations, bootstrap the realm, and wait for readiness.
+    Every `/api/v1` request inherits the collection's OAuth 2.0 Authorization
+    Code with PKCE authentication; `/health` and `/ready` remain public.
+items:
+  - info:
+      name: Health
+      type: folder
+      seq: 1
+    items:
+      - info:
+          name: Get Health
+          type: http
+          seq: 1
+        http:
+          method: GET
+          url: "{{baseUrl}}/health"
+          headers:
+            - name: Accept
+              value: application/json
+      - info:
+          name: Get Readiness
+          type: http
+          seq: 2
+        http:
+          method: GET
+          url: "{{baseUrl}}/ready"
+          headers:
+            - name: Accept
+              value: application/json
+  - info:
+      name: Items
+      type: folder
+      seq: 2
+    items:
+      - info:
+          name: Create Item
+          type: http
+          seq: 1
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/items"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "asset_tag": "LAP-001",
+                "name": "Dell Latitude 7440",
+                "description": "Laptop assigned to the engineering department",
+                "serial_number": "DL7440-001",
+                "category_id": null
+              }
+          auth: inherit
+      - info:
+          name: List Items
+          type: http
+          seq: 2
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/items"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Get Item
+          type: http
+          seq: 3
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/items/{{itemId}}"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Update Item
+          type: http
+          seq: 4
+        http:
+          method: PUT
+          url: "{{baseUrl}}/api/v1/items/{{itemId}}"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "asset_tag": "LAP-001",
+                "name": "Dell Latitude 7440 Updated",
+                "description": "Updated equipment description",
+                "serial_number": "DL7440-001",
+                "category_id": null
+              }
+          auth: inherit
+      - info:
+          name: Delete Item
+          type: http
+          seq: 5
+        http:
+          method: DELETE
+          url: "{{baseUrl}}/api/v1/items/{{itemId}}"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+  - info:
+      name: Categories
+      type: folder
+      seq: 3
+    items:
+      - info:
+          name: Create Category
+          type: http
+          seq: 1
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/categories"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "name": "Camera",
+                "description": "Photography and video equipment"
+              }
+          auth: inherit
+      - info:
+          name: List Categories
+          type: http
+          seq: 2
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/categories"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Get Category
+          type: http
+          seq: 3
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/categories/{{categoryId}}"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Update Category
+          type: http
+          seq: 4
+        http:
+          method: PUT
+          url: "{{baseUrl}}/api/v1/categories/{{categoryId}}"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "name": "Camera",
+                "description": "Updated photography equipment"
+              }
+          auth: inherit
+      - info:
+          name: Delete Category
+          type: http
+          seq: 5
+        http:
+          method: DELETE
+          url: "{{baseUrl}}/api/v1/categories/{{categoryId}}"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+  - info:
+      name: Users and Authentication
+      type: folder
+      seq: 4
+    items:
+      - info:
+          name: Create User
+          type: http
+          seq: 1
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/users"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "username": "postman.operator",
+                "email": "postman.operator@example.test",
+                "display_name": "Postman Operator"
+              }
+          auth: inherit
+      - info:
+          name: List Users
+          type: http
+          seq: 2
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/users"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: List Active Users
+          type: http
+          seq: 3
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/users?is_active=true"
+          params:
+            - name: is_active
+              value: "true"
+              type: query
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Get User
+          type: http
+          seq: 4
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/users/{{userId}}"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Update User Profile
+          type: http
+          seq: 5
+        http:
+          method: PUT
+          url: "{{baseUrl}}/api/v1/users/{{userId}}"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "username": "updated.operator",
+                "email": null,
+                "display_name": "Updated Operator"
+              }
+          auth: inherit
+      - info:
+          name: Set User Status
+          type: http
+          seq: 6
+        http:
+          method: PATCH
+          url: "{{baseUrl}}/api/v1/users/{{userId}}/status"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "is_active": false
+              }
+          auth: inherit
+      - info:
+          name: Get Current Authenticated User
+          type: http
+          seq: 7
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/me"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+  - info:
+      name: Checkouts
+      type: folder
+      seq: 5
+    items:
+      - info:
+          name: Create Checkout
+          type: http
+          seq: 1
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/items/{{itemId}}/checkouts"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "borrower_user_id": {{borrowerUserId}},
+                "due_at": "2030-01-10T17:00:00Z",
+                "notes": "Presentation checkout"
+              }
+          auth: inherit
+      - info:
+          name: List Checkouts
+          type: http
+          seq: 2
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/checkouts?limit={{checkoutLimit}}&offset={{checkoutOffset}}"
+          params:
+            - name: limit
+              value: "{{checkoutLimit}}"
+              type: query
+            - name: offset
+              value: "{{checkoutOffset}}"
+              type: query
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Get Checkout
+          type: http
+          seq: 3
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/checkouts/{{checkoutId}}"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: List Item Checkouts
+          type: http
+          seq: 4
+        http:
+          method: GET
+          url: "{{baseUrl}}/api/v1/items/{{itemId}}/checkouts?limit={{checkoutLimit}}&offset={{checkoutOffset}}"
+          params:
+            - name: limit
+              value: "{{checkoutLimit}}"
+              type: query
+            - name: offset
+              value: "{{checkoutOffset}}"
+              type: query
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Return Checkout
+          type: http
+          seq: 5
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/checkouts/{{checkoutId}}/return"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+      - info:
+          name: Failure - Checkout With Past Due Date
+          type: http
+          seq: 6
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/items/{{itemId}}/checkouts"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "borrower_user_id": {{borrowerUserId}},
+                "due_at": "2020-01-01T00:00:00Z",
+                "notes": "Expected validation failure"
+              }
+          auth: inherit
+      - info:
+          name: Failure - Return Checkout Again
+          type: http
+          seq: 7
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/checkouts/{{checkoutId}}/return"
+          headers:
+            - name: Accept
+              value: application/json
+          auth: inherit
+  - info:
+      name: Create Multiple Test Items
+      type: folder
+      seq: 6
+    items:
+      - info:
+          name: Create Test Laptop
+          type: http
+          seq: 1
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/items"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "asset_tag": "TEST-LAP-001",
+                "name": "Lenovo ThinkPad T14",
+                "description": "Test laptop for the engineering team",
+                "serial_number": "TEST-LAP-SN-001"
+              }
+          auth: inherit
+      - info:
+          name: Create Test Monitor
+          type: http
+          seq: 2
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/items"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "asset_tag": "TEST-MON-001",
+                "name": "Dell UltraSharp 27 Monitor",
+                "description": "Test monitor for a shared workstation",
+                "serial_number": "TEST-MON-SN-001"
+              }
+          auth: inherit
+      - info:
+          name: Create Test Projector
+          type: http
+          seq: 3
+        http:
+          method: POST
+          url: "{{baseUrl}}/api/v1/items"
+          headers:
+            - name: Accept
+              value: application/json
+            - name: Content-Type
+              value: application/json
+          body:
+            type: json
+            data: |-
+              {
+                "asset_tag": "TEST-PROJ-001",
+                "name": "Epson Meeting Room Projector",
+                "description": "Test projector for meeting room bookings",
+                "serial_number": "TEST-PROJ-SN-001"
+              }
+          auth: inherit

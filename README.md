@@ -16,7 +16,7 @@ Keycloak client roles.
 ├── Makefile              Development commands
 ├── compose.yaml          API, migration, PostgreSQL, and Keycloak services
 ├── keycloak/             Reproducible development realm and bootstrap script
-├── postman/              Importable API collection
+├── api-collections/      Importable Postman and OpenCollection API collections
 ├── scripts/              Safe local development utilities
 └── server/
     ├── cmd/              CLI commands and application wiring
@@ -148,11 +148,17 @@ Compose uses Keycloak's internal service address while preserving the same
 public `OIDC_ISSUER_URL`. `/health` remains process-only and `/ready` remains
 database-only.
 
-## Obtain a Postman access token
+## Import the API collection
 
-Import
-`postman/Equipment Checkout API.postman_collection.json`, select the
-collection's Authorization tab, and configure OAuth 2.0:
+Postman users can import
+`api-collections/Equipment Checkout API.postman_collection.json`. Bruno users
+can import the bundled
+`api-collections/Equipment Checkout API.opencollection.yml`; its OpenCollection
+OAuth configuration includes the `credentials` Token ID required for Bruno's
+token viewer and refresh action.
+
+After importing, select the collection's Authorization tab and review the
+preconfigured OAuth 2.0 settings:
 
 | Postman setting | Development value |
 | --- | --- |
@@ -161,18 +167,27 @@ collection's Authorization tab, and configure OAuth 2.0:
 | Auth URL | `{{oidcAuthUrl}}` |
 | Access Token URL | `{{oidcTokenUrl}}` |
 | Client ID | `{{oidcClientId}}` |
-| Client secret | Leave empty; this is a public client |
+| Client secret | Empty; this is a public client |
 | Code challenge method | SHA-256 |
 | Scope | `{{oidcScope}}` |
+| Header prefix | `Bearer` |
+| Token ID | `credentials` |
 
-Use browser authorization, sign in as one representative user, and request the
-token. Copy only the access token into the local **Current value** of the
-collection's `accessToken` variable. Do not place tokens in Initial values,
-export them with the collection, commit them, or paste them into logs. Repeat
-with another representative user when exercising a different role.
+The Postman JSON records `credentialsId=credentials` as a compatibility marker,
+but Bruno 4.0.0 does not import that custom Postman OAuth field. Import the
+OpenCollection file to populate Bruno's Token ID automatically, or set the
+field manually after importing the Postman file.
 
-The collection applies `Bearer {{accessToken}}` to API requests and explicitly
-leaves `/health` and `/ready` unauthenticated.
+In Postman, select **Get New Access Token**, sign in as one representative user
+through the browser, select **Proceed**, and then select **Use Token**. In
+Bruno, select **Get Access Token** and complete the same browser login. The API
+client will add the resulting Bearer access token to inherited API requests.
+Do not share or sync the token, export it with the collection, commit it, or
+paste it into logs. Repeat with another representative user when exercising a
+different role.
+
+The collection applies OAuth 2.0 Bearer authentication to API requests and
+explicitly leaves `/health` and `/ready` unauthenticated.
 
 ### Inspect safe token metadata
 
