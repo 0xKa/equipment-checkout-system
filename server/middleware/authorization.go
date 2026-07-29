@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"slices"
+
 	"github.com/0xKa/equipment-checkout-system/server/types"
 	"github.com/labstack/echo/v5"
 )
@@ -21,10 +23,8 @@ func RequireAnyCapability(capabilities ...types.Capability) echo.MiddlewareFunc 
 				return types.ErrAuthenticationRequired
 			}
 
-			for _, capability := range capabilities {
-				if actor.Capabilities.Has(capability) {
-					return next(c)
-				}
+			if slices.ContainsFunc(capabilities, actor.Capabilities.Has) {
+				return next(c)
 			}
 
 			return types.ErrForbidden
