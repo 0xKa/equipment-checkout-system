@@ -194,15 +194,17 @@ explicitly leaves `/health` and `/ready` unauthenticated.
 To inspect an access token without echoing it or printing the complete claims
 document:
 
-```powershell
-.\scripts\inspect-access-token.ps1
+```text
+make inspect-token
 ```
 
-The script prompts with hidden input and prints only issuer, subject, audience,
-authorized party, username, email-verification state, `equipment-api` roles,
-and expiry. This is inspection only; decoding a JWT does not validate it. The
-API remains the security boundary that verifies signature, algorithm, issuer,
-audience, subject, and lifetime.
+The cross-platform Go command prompts with hidden input and prints only issuer,
+subject, audience, authorized party, username, email-verification state,
+`equipment-api` roles, expiry, and whether the token is expired based only on
+`exp` and the local machine's clock. It requires Go and GNU Make, but does not
+require PowerShell, Bash, or `jq`. This is inspection only; decoding a JWT does
+not validate it. The API remains the security boundary that verifies signature,
+algorithm, issuer, audience, subject, and lifetime.
 
 ## Authenticated request flow
 

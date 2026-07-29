@@ -12,7 +12,7 @@ REQUIRED_DATABASE_VARIABLES := POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTG
 REQUIRED_KEYCLOAK_VARIABLES := KEYCLOAK_HTTP_PORT KEYCLOAK_POSTGRES_DB KEYCLOAK_POSTGRES_USER KEYCLOAK_POSTGRES_PASSWORD KEYCLOAK_POSTGRES_VOLUME_NAME KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD KEYCLOAK_SAMPLE_BORROWER_PASSWORD KEYCLOAK_AUDIT_VIEWER_PASSWORD
 REQUIRED_OIDC_VARIABLES := OIDC_ISSUER_URL OIDC_JWKS_URL OIDC_AUDIENCE OIDC_HTTP_TIMEOUT OIDC_CLOCK_SKEW
 
-.PHONY: check-db-env check-keycloak-env check-oidc-env compose-up keycloak-up keycloak-stop keycloak-reset db-up compose-down compose-down-volumes migrate-up migrate-down migrate-status seed-dev reset-dev sqlc test build run
+.PHONY: check-db-env check-keycloak-env check-oidc-env compose-up keycloak-up keycloak-stop keycloak-reset db-up compose-down compose-down-volumes migrate-up migrate-down migrate-status seed-dev reset-dev sqlc inspect-token test build run
 
 # Validate that the environment file exists and contains every required database setting.
 check-db-env:
@@ -98,6 +98,10 @@ sqlc:
 # Print a small message for quickly confirming that Make is working.
 hello:
 	@echo Hello World!
+
+# Prompt securely for an access token and decode only allowlisted metadata.
+inspect-token:
+	cd server && go run . inspect-token
 
 # Run the complete Go test suite from the server module directory.
 test:

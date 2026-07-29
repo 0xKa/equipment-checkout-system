@@ -14,6 +14,9 @@ func newRootCommand() *cobra.Command {
 		SilenceErrors: true,
 	}
 
-	root.AddCommand(newServeCommand())
+	root.AddCommand(
+		newInspectTokenCommand(),
+		newServeCommand(),
+	)
 	return root
 }
