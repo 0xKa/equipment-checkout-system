@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Equipment Checkout</title>
+  <defs>
+    <linearGradient id="surface" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d9f1f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#surface)"/>
+  <path d="M18 20.5A4.5 4.5 0 0 1 22.5 16h19a4.5 4.5 0 0 1 4.5 4.5V37H18V20.5Z" fill="#0b6e75"/>
+  <path d="M22 21h20v12H22V21Z" fill="#e7f7f6"/>
+  <path d="M14 39h36l-2.4 6.2A4.4 4.4 0 0 1 43.5 48h-23a4.4 4.4 0 0 1-4.1-2.8L14 39Z" fill="#0b6e75"/>
+  <path d="M28 43h8" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="47" cy="18" r="9" fill="#f2a93b"/>
+  <path d="m43.2 18 2.4 2.4 4.6-5" fill="none" stroke="#10233f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

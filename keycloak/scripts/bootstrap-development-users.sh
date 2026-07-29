@@ -11,6 +11,7 @@ set -euo pipefail
 readonly KEYCLOAK_SERVER="http://keycloak:8080"
 readonly TARGET_REALM="equipment"
 readonly API_CLIENT_ID="equipment-api"
+readonly LOGIN_THEME="equipment"
 readonly KCADM="/opt/keycloak/bin/kcadm.sh"
 readonly KCADM_CONFIG="/tmp/kcadm.config"
 
@@ -42,6 +43,10 @@ KC_CLI_PASSWORD="${KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD}" \
   --server "${KEYCLOAK_SERVER}" \
   --realm master \
   --user "${KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME}" >/dev/null
+
+"${KCADM}" update "realms/${TARGET_REALM}" \
+  --config "${KCADM_CONFIG}" \
+  --set "loginTheme=${LOGIN_THEME}" >/dev/null
 
 api_client_json="$(
   "${KCADM}" get clients \
@@ -99,4 +104,4 @@ set_development_password "equipment.admin" "${KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD}
 set_development_password "sample.borrower" "${KEYCLOAK_SAMPLE_BORROWER_PASSWORD}"
 set_development_password "audit.viewer" "${KEYCLOAK_AUDIT_VIEWER_PASSWORD}"
 
-echo "Keycloak development-user passwords are configured."
+echo "Keycloak development theme and user passwords are configured."

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="keycloak/themes/equipment/login/resources/img/equipment-mark.svg" alt="Equipment Checkout logo" width="96" height="96">
+
 <h1>Equipment Checkout System</h1>
 <p>
 A backend-only Go REST API for managing equipment, categories, local users, and
@@ -379,6 +381,12 @@ The development Admin Console is available at
 `KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD`, then switch to the `equipment` realm. The
 bootstrap administrator is for realm administration and must not be used as an
 application actor.
+
+The `equipment` realm uses the custom login theme in
+`keycloak/themes/equipment`. It inherits Keycloak's maintained login templates
+and adds project-specific colors, typography, copy, and artwork. Compose mounts
+the theme read-only, and the development bootstrap reapplies the theme selection
+to existing persisted realms.
 
 Executed security checks, expected response envelopes, implementation-backed
 invariants, and the remaining manual acceptance matrix are documented in

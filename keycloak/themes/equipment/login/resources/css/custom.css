@@ -1,0 +1,180 @@
+/*
+ * Equipment Checkout login theme
+ *
+ * This stylesheet intentionally builds on Keycloak's keycloak.v2 theme instead
+ * of replacing its templates. Keycloak remains responsible for accessible
+ * markup and every authentication flow; this file supplies only visual branding.
+ */
+
+:root {
+  --equipment-ink: #10233f;
+  --equipment-ink-muted: #52647a;
+  --equipment-primary: #0b6e75;
+  --equipment-primary-dark: #07565c;
+  --equipment-accent: #f2a93b;
+  --equipment-surface: rgba(255, 255, 255, 0.96);
+  --equipment-border: rgba(16, 35, 63, 0.12);
+
+  --pf-v5-global--primary-color--100: var(--equipment-primary);
+  --pf-v5-global--primary-color--200: var(--equipment-primary-dark);
+  --pf-v5-global--link--Color: var(--equipment-primary);
+  --pf-v5-global--link--Color--hover: var(--equipment-primary-dark);
+}
+
+html,
+body,
+.login-pf body,
+body.login-pf-page,
+.login-pf-page {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(242, 169, 59, 0.2), transparent 24rem),
+    radial-gradient(circle at 88% 82%, rgba(11, 110, 117, 0.2), transparent 28rem),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(145deg, #0c1a2d 0%, #15334b 52%, #0a4c52 100%) !important;
+  background-size: auto, auto, 32px 32px, 32px 32px, auto !important;
+}
+
+.login-pf-page {
+  color: var(--equipment-ink);
+}
+
+#kc-header {
+  margin-bottom: 1.5rem;
+}
+
+#kc-header-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ffffff;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: none;
+  text-shadow: 0 2px 16px rgba(4, 15, 28, 0.3);
+}
+
+#kc-header-wrapper::before {
+  width: 4rem;
+  height: 4rem;
+  background: url("../img/equipment-mark.svg") center / contain no-repeat;
+  content: "";
+  filter: drop-shadow(0 8px 18px rgba(4, 15, 28, 0.28));
+}
+
+.pf-v5-c-login__main,
+.login-pf-page .card-pf {
+  overflow: hidden;
+  border: 1px solid var(--equipment-border);
+  border-radius: 1rem;
+  background: var(--equipment-surface);
+  box-shadow: 0 1.5rem 4rem rgba(4, 15, 28, 0.28);
+}
+
+.pf-v5-c-login__main::before,
+.login-pf-page .card-pf::before {
+  display: block;
+  width: 100%;
+  height: 0.3rem;
+  background: linear-gradient(
+    90deg,
+    var(--equipment-primary) 0%,
+    #1c9197 68%,
+    var(--equipment-accent) 68%,
+    var(--equipment-accent) 100%
+  );
+  content: "";
+}
+
+#kc-page-title {
+  color: var(--equipment-ink);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pf-v5-c-form__label,
+.control-label {
+  color: var(--equipment-ink);
+  font-weight: 600;
+}
+
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--focus--BorderBottomColor: var(--equipment-primary);
+  --pf-v5-c-form-control--after--BorderBottomColor: var(--equipment-primary);
+  border-radius: 0.45rem;
+}
+
+.pf-v5-c-button.pf-m-primary,
+#kc-login {
+  border-radius: 0.5rem;
+  background-color: var(--equipment-primary);
+  font-weight: 700;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus,
+#kc-login:hover,
+#kc-login:focus {
+  background-color: var(--equipment-primary-dark);
+  box-shadow: 0 0.5rem 1.25rem rgba(11, 110, 117, 0.25);
+}
+
+.pf-v5-c-button.pf-m-primary:active,
+#kc-login:active {
+  transform: translateY(1px);
+}
+
+a,
+.pf-v5-c-button.pf-m-link {
+  color: var(--equipment-primary);
+  font-weight: 600;
+}
+
+a:hover,
+a:focus,
+.pf-v5-c-button.pf-m-link:hover,
+.pf-v5-c-button.pf-m-link:focus {
+  color: var(--equipment-primary-dark);
+}
+
+.pf-v5-c-alert.pf-m-danger,
+.alert-error {
+  border-left-color: #c23b3b;
+}
+
+#kc-info-wrapper {
+  color: var(--equipment-ink-muted);
+  background: rgba(11, 110, 117, 0.06);
+}
+
+@media (max-width: 767px) {
+  #kc-header {
+    margin-bottom: 1rem;
+  }
+
+  #kc-header-wrapper::before {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .pf-v5-c-login__main,
+  .login-pf-page .card-pf {
+    border-radius: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-v5-c-button.pf-m-primary,
+  #kc-login {
+    transition: none;
+  }
+}

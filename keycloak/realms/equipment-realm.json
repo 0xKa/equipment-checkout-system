@@ -2,6 +2,7 @@
   "id": "equipment",
   "realm": "equipment",
   "displayName": "Equipment Checkout System",
+  "loginTheme": "equipment",
   "enabled": true,
   "sslRequired": "external",
   "defaultSignatureAlgorithm": "RS256",
