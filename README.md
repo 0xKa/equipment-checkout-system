@@ -85,7 +85,7 @@ flowchart LR
 
 ## Scalar API reference
 
-available at `http://localhost:8080/scalar/` after `make compose-up`. The raw OpenAPI 3.1 document is available at `http://localhost:8080/openapi.yaml
+available at `http://localhost:8080/scalar/` after `make compose-up`. The raw OpenAPI 3.1 document is available at `http://localhost:8080/openapi.yaml`
 
 ![Scalar API Reference](docs/imgs/scalar-api-screenshot.png)
 
