@@ -26,23 +26,35 @@ const (
 )
 
 type Config struct {
-	AppEnv                  string
-	HTTPHost                string
-	HTTPPort                string
-	DatabaseURL             string
-	DBMaxConnections        int32
-	DBMinConnections        int32
-	DBMaxConnectionLifetime time.Duration
-	APIDocsEnabled          bool
-	OIDCIssuerURL           string
-	OIDCJWKSURL             string
-	OIDCAudience            string
-	OIDCHTTPTimeout         time.Duration
-	OIDCClockSkew           time.Duration
+	AppEnv         string
+	HTTP           HTTPConfig
+	Database       DatabaseConfig
+	OIDC           OIDCConfig
+	APIDocsEnabled bool
 }
 
-func (c Config) HTTPAddress() string {
-	return fmt.Sprintf("%s:%s", c.HTTPHost, c.HTTPPort)
+type HTTPConfig struct {
+	Host string
+	Port string
+}
+
+func (c HTTPConfig) Address() string {
+	return fmt.Sprintf("%s:%s", c.Host, c.Port)
+}
+
+type DatabaseConfig struct {
+	URL                   string
+	MaxConnections        int32
+	MinConnections        int32
+	MaxConnectionLifetime time.Duration
+}
+
+type OIDCConfig struct {
+	IssuerURL   string
+	JWKSURL     string
+	Audience    string
+	HTTPTimeout time.Duration
+	ClockSkew   time.Duration
 }
 
 func Load() (Config, error) {
@@ -55,49 +67,14 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("APP_ENV must not be empty")
 	}
 
-	host := getEnv("HTTP_HOST", defaultHTTPHost)
-	if host == "" {
-		return Config{}, fmt.Errorf("HTTP_HOST must not be empty")
-	}
-
-	portValue := getEnv("HTTP_PORT", defaultPort)
-	port, err := strconv.Atoi(portValue)
-	if err != nil || port <= 0 || port > 65535 {
-		return Config{}, fmt.Errorf("HTTP_PORT must be an integer between 1 and 65535")
-	}
-
-	databaseURL := getEnv("DATABASE_URL", "")
-	if databaseURL == "" {
-		return Config{}, fmt.Errorf("DATABASE_URL must not be empty")
-	}
-
-	maxConnections, err := parseConnectionCount(
-		"DB_MAX_CONNECTIONS",
-		getEnv("DB_MAX_CONNECTIONS", defaultDBMaxConnections),
-		1,
-		maxSupportedDBConnections,
-	)
+	httpConfig, err := loadHTTPConfig()
 	if err != nil {
 		return Config{}, err
 	}
 
-	minConnections, err := parseConnectionCount(
-		"DB_MIN_CONNECTIONS",
-		getEnv("DB_MIN_CONNECTIONS", defaultDBMinConnections),
-		1,
-		int64(maxConnections),
-	)
+	databaseConfig, err := loadDatabaseConfig()
 	if err != nil {
 		return Config{}, err
-	}
-
-	maxConnectionLifetimeValue := getEnv(
-		"DB_MAX_CONNECTION_LIFETIME",
-		defaultDBMaxConnectionLifetime,
-	)
-	maxConnectionLifetime, err := time.ParseDuration(maxConnectionLifetimeValue)
-	if err != nil || maxConnectionLifetime <= 0 {
-		return Config{}, fmt.Errorf("DB_MAX_CONNECTION_LIFETIME must be a positive duration")
 	}
 
 	apiDocsEnabled, err := parseExactBool(
@@ -108,58 +85,126 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	oidcIssuerURL, err := parseHTTPURL(
+	oidcConfig, err := loadOIDCConfig()
+	if err != nil {
+		return Config{}, err
+	}
+
+	return Config{
+		AppEnv:         appEnv,
+		HTTP:           httpConfig,
+		Database:       databaseConfig,
+		APIDocsEnabled: apiDocsEnabled,
+		OIDC:           oidcConfig,
+	}, nil
+}
+
+func loadHTTPConfig() (HTTPConfig, error) {
+	host := getEnv("HTTP_HOST", defaultHTTPHost)
+	if host == "" {
+		return HTTPConfig{}, fmt.Errorf("HTTP_HOST must not be empty")
+	}
+
+	portValue := getEnv("HTTP_PORT", defaultPort)
+	port, err := strconv.Atoi(portValue)
+	if err != nil || port <= 0 || port > 65535 {
+		return HTTPConfig{}, fmt.Errorf("HTTP_PORT must be an integer between 1 and 65535")
+	}
+
+	return HTTPConfig{
+		Host: host,
+		Port: portValue,
+	}, nil
+}
+
+func loadDatabaseConfig() (DatabaseConfig, error) {
+	databaseURL := getEnv("DATABASE_URL", "")
+	if databaseURL == "" {
+		return DatabaseConfig{}, fmt.Errorf("DATABASE_URL must not be empty")
+	}
+
+	maxConnections, err := parseConnectionCount(
+		"DB_MAX_CONNECTIONS",
+		getEnv("DB_MAX_CONNECTIONS", defaultDBMaxConnections),
+		1,
+		maxSupportedDBConnections,
+	)
+	if err != nil {
+		return DatabaseConfig{}, err
+	}
+
+	minConnections, err := parseConnectionCount(
+		"DB_MIN_CONNECTIONS",
+		getEnv("DB_MIN_CONNECTIONS", defaultDBMinConnections),
+		1,
+		int64(maxConnections),
+	)
+	if err != nil {
+		return DatabaseConfig{}, err
+	}
+
+	maxConnectionLifetimeValue := getEnv(
+		"DB_MAX_CONNECTION_LIFETIME",
+		defaultDBMaxConnectionLifetime,
+	)
+	maxConnectionLifetime, err := time.ParseDuration(maxConnectionLifetimeValue)
+	if err != nil || maxConnectionLifetime <= 0 {
+		return DatabaseConfig{}, fmt.Errorf("DB_MAX_CONNECTION_LIFETIME must be a positive duration")
+	}
+
+	return DatabaseConfig{
+		URL:                   databaseURL,
+		MaxConnections:        maxConnections,
+		MinConnections:        minConnections,
+		MaxConnectionLifetime: maxConnectionLifetime,
+	}, nil
+}
+
+func loadOIDCConfig() (OIDCConfig, error) {
+	issuerURL, err := parseHTTPURL(
 		"OIDC_ISSUER_URL",
 		getEnv("OIDC_ISSUER_URL", ""),
 		false,
 	)
 	if err != nil {
-		return Config{}, err
+		return OIDCConfig{}, err
 	}
 
-	oidcJWKSURL, err := parseHTTPURL(
+	jwksURL, err := parseHTTPURL(
 		"OIDC_JWKS_URL",
 		getEnv("OIDC_JWKS_URL", ""),
 		true,
 	)
 	if err != nil {
-		return Config{}, err
+		return OIDCConfig{}, err
 	}
 
-	oidcAudience := getEnv("OIDC_AUDIENCE", defaultOIDCAudience)
-	if oidcAudience == "" {
-		return Config{}, fmt.Errorf("OIDC_AUDIENCE must not be empty")
+	audience := getEnv("OIDC_AUDIENCE", defaultOIDCAudience)
+	if audience == "" {
+		return OIDCConfig{}, fmt.Errorf("OIDC_AUDIENCE must not be empty")
 	}
 
-	oidcHTTPTimeout, err := parsePositiveDuration(
+	httpTimeout, err := parsePositiveDuration(
 		"OIDC_HTTP_TIMEOUT",
 		getEnv("OIDC_HTTP_TIMEOUT", defaultOIDCHTTPTimeout),
 	)
 	if err != nil {
-		return Config{}, err
+		return OIDCConfig{}, err
 	}
 
-	oidcClockSkew, err := time.ParseDuration(
+	clockSkew, err := time.ParseDuration(
 		getEnv("OIDC_CLOCK_SKEW", defaultOIDCClockSkew),
 	)
-	if err != nil || oidcClockSkew < 0 {
-		return Config{}, fmt.Errorf("OIDC_CLOCK_SKEW must be a nonnegative duration")
+	if err != nil || clockSkew < 0 {
+		return OIDCConfig{}, fmt.Errorf("OIDC_CLOCK_SKEW must be a nonnegative duration")
 	}
 
-	return Config{
-		AppEnv:                  appEnv,
-		HTTPHost:                host,
-		HTTPPort:                portValue,
-		DatabaseURL:             databaseURL,
-		DBMaxConnections:        maxConnections,
-		DBMinConnections:        minConnections,
-		DBMaxConnectionLifetime: maxConnectionLifetime,
-		APIDocsEnabled:          apiDocsEnabled,
-		OIDCIssuerURL:           oidcIssuerURL,
-		OIDCJWKSURL:             oidcJWKSURL,
-		OIDCAudience:            oidcAudience,
-		OIDCHTTPTimeout:         oidcHTTPTimeout,
-		OIDCClockSkew:           oidcClockSkew,
+	return OIDCConfig{
+		IssuerURL:   issuerURL,
+		JWKSURL:     jwksURL,
+		Audience:    audience,
+		HTTPTimeout: httpTimeout,
+		ClockSkew:   clockSkew,
 	}, nil
 }
 

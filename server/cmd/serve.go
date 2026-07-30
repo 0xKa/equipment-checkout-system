@@ -55,16 +55,16 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 
 	oidcContext, cancelOIDCStartup := context.WithTimeout(
 		context.Background(),
-		cfg.OIDCHTTPTimeout,
+		cfg.OIDC.HTTPTimeout,
 	)
 	tokenVerifier, err := services.NewOIDCTokenVerifier(
 		oidcContext,
 		services.OIDCVerifierConfig{
-			IssuerURL:   cfg.OIDCIssuerURL,
-			JWKSURL:     cfg.OIDCJWKSURL,
-			Audience:    cfg.OIDCAudience,
-			HTTPTimeout: cfg.OIDCHTTPTimeout,
-			ClockSkew:   cfg.OIDCClockSkew,
+			IssuerURL:   cfg.OIDC.IssuerURL,
+			JWKSURL:     cfg.OIDC.JWKSURL,
+			Audience:    cfg.OIDC.Audience,
+			HTTPTimeout: cfg.OIDC.HTTPTimeout,
+			ClockSkew:   cfg.OIDC.ClockSkew,
 		},
 	)
 	cancelOIDCStartup()
@@ -77,10 +77,10 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 		context.Background(),
 		databaseStartupTimeout,
 	)
-	pool, err := db.NewPool(databaseContext, cfg.DatabaseURL, db.PoolOptions{
-		MaxConnections:        cfg.DBMaxConnections,
-		MinConnections:        cfg.DBMinConnections,
-		MaxConnectionLifetime: cfg.DBMaxConnectionLifetime,
+	pool, err := db.NewPool(databaseContext, cfg.Database.URL, db.PoolOptions{
+		MaxConnections:        cfg.Database.MaxConnections,
+		MinConnections:        cfg.Database.MinConnections,
+		MaxConnectionLifetime: cfg.Database.MaxConnectionLifetime,
 	})
 	cancelDatabaseStartup()
 	if err != nil {
@@ -128,7 +128,7 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 		requireBearer,
 	)
 
-	address := cfg.HTTPAddress()
+	address := cfg.HTTP.Address()
 	log.Info("starting HTTP server",
 		zap.String("environment", cfg.AppEnv),
 		zap.String("address", address),
