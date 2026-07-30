@@ -67,7 +67,8 @@ flowchart LR
     │   ├── queries/
     │   ├── scripts/
     │   ├── seeds/
-    │   └── sqlcgen/
+    │   ├── sqlcgen/
+    │   └── sqlc.yaml
     ├── handlers/
     ├── logger/
     ├── middleware/
@@ -79,8 +80,7 @@ flowchart LR
     ├── .env.example
     ├── Dockerfile
     ├── go.mod
-    ├── go.sum
-    └── sqlc.yaml
+    └── go.sum
 ```
 
 ## Scalar API reference

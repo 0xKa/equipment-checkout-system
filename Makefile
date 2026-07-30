@@ -101,7 +101,7 @@ reset-dev: check-db-env
 
 # Generate pgx/v5-compatible Go code from the reviewed queries.
 sqlc:
-	@$(SQLC) generate -f server/sqlc.yaml
+	@$(SQLC) generate -f server/db/sqlc.yaml
 
 # Prompt securely for an access token and decode only allowlisted metadata.
 inspect-token:
