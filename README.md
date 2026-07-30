@@ -15,11 +15,11 @@ service, persistence, history, and audit layers.
 
 ```mermaid
 flowchart LR
-    A["Postman, Bruno, or another HTTP client"] --> B["Echo v5 global middleware"]
+    A["Scalar, Postman, Bruno, or another HTTP client"] --> B["Echo v5 global middleware"]
     B --> C["Route registration"]
     C --> D{"Public route?"}
 
-    D -- "Yes: /health or /ready" --> E["Health handler"]
+    D -- "Yes: health, readiness, or enabled API docs" --> E["Public handler"]
     D -- "No: /api/v1" --> F["Bearer authentication middleware"]
 
     F --> G["OIDC verifier and cached Keycloak JWKS"]
@@ -59,6 +59,7 @@ flowchart LR
 │   └── scripts/
 │       └── bootstrap-development-users.sh
 └── server/
+    ├── api_docs/
     ├── cmd/
     ├── config/
     ├── db/
@@ -70,6 +71,7 @@ flowchart LR
     ├── handlers/
     ├── logger/
     ├── middleware/
+    ├── openapi/
     ├── routes/
     ├── services/
     ├── types/
@@ -80,6 +82,12 @@ flowchart LR
     ├── go.sum
     └── sqlc.yaml
 ```
+
+## Scalar API reference
+
+available at `http://localhost:8080/scalar/` after `make compose-up`. The raw OpenAPI 3.1 document is available at `http://localhost:8080/openapi.yaml
+
+![Scalar API Reference](docs/imgs/scalar-api-screenshot.png)
 
 ## ERD diagram
 
@@ -109,50 +117,51 @@ file or place real credentials in `server/.env.example`.
 
 ### Application and database settings
 
-| Variable | Purpose |
-| --- | --- |
-| `APP_ENV` | Runtime environment; development-only data commands require `development` |
-| `HTTP_HOST` | API bind host |
-| `HTTP_PORT` | API host and published port |
-| `DATABASE_URL` | Host-side PostgreSQL connection string |
-| `POSTGRES_DB` | Application database name |
-| `POSTGRES_USER` | Application database user |
-| `POSTGRES_PASSWORD` | Application database password |
-| `POSTGRES_PORT` | Host-published application database port |
-| `DB_MAX_CONNECTIONS` | Maximum pgxpool connections |
-| `DB_MIN_CONNECTIONS` | Minimum pgxpool connections |
-| `DB_MAX_CONNECTION_LIFETIME` | Maximum pooled connection lifetime |
+| Variable                     | Purpose                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| `APP_ENV`                    | Runtime environment; development-only data commands require `development` |
+| `HTTP_HOST`                  | API bind host                                                             |
+| `HTTP_PORT`                  | API host and published port                                               |
+| `API_DOCS_ENABLED`           | Registers the public Scalar UI and embedded OpenAPI document when `true`  |
+| `DATABASE_URL`               | Host-side PostgreSQL connection string                                    |
+| `POSTGRES_DB`                | Application database name                                                 |
+| `POSTGRES_USER`              | Application database user                                                 |
+| `POSTGRES_PASSWORD`          | Application database password                                             |
+| `POSTGRES_PORT`              | Host-published application database port                                  |
+| `DB_MAX_CONNECTIONS`         | Maximum pgxpool connections                                               |
+| `DB_MIN_CONNECTIONS`         | Minimum pgxpool connections                                               |
+| `DB_MAX_CONNECTION_LIFETIME` | Maximum pooled connection lifetime                                        |
 
 PostgreSQL is required at runtime. The API fails startup when the application
 database is unavailable and does not provide an in-memory fallback.
 
 ### OIDC settings
 
-| Variable | Purpose |
-| --- | --- |
-| `OIDC_ISSUER_URL` | Exact accepted Keycloak issuer |
-| `OIDC_JWKS_URL` | JWKS endpoint used by a host-run API |
-| `OIDC_AUDIENCE` | Required access-token audience |
-| `OIDC_HTTP_TIMEOUT` | Timeout for OIDC network operations |
-| `OIDC_CLOCK_SKEW` | Accepted token time-claim skew |
+| Variable            | Purpose                              |
+| ------------------- | ------------------------------------ |
+| `OIDC_ISSUER_URL`   | Exact accepted Keycloak issuer       |
+| `OIDC_JWKS_URL`     | JWKS endpoint used by a host-run API |
+| `OIDC_AUDIENCE`     | Required access-token audience       |
+| `OIDC_HTTP_TIMEOUT` | Timeout for OIDC network operations  |
+| `OIDC_CLOCK_SKEW`   | Accepted token time-claim skew       |
 
 Compose uses Keycloak's internal service address for JWKS while preserving the
 public localhost issuer configured in `OIDC_ISSUER_URL`.
 
 ### Keycloak settings
 
-| Variable | Purpose |
-| --- | --- |
-| `KEYCLOAK_HTTP_PORT` | Loopback port for Keycloak and its Admin Console |
-| `KEYCLOAK_POSTGRES_DB` | Dedicated Keycloak database name |
-| `KEYCLOAK_POSTGRES_USER` | Dedicated Keycloak database user |
-| `KEYCLOAK_POSTGRES_PASSWORD` | Dedicated Keycloak database password |
-| `KEYCLOAK_POSTGRES_VOLUME_NAME` | Exact persistent Keycloak volume name |
-| `KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME` | Development Admin Console username |
-| `KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD` | Development Admin Console password |
-| `KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD` | `equipment.admin` password |
-| `KEYCLOAK_SAMPLE_BORROWER_PASSWORD` | `sample.borrower` password |
-| `KEYCLOAK_AUDIT_VIEWER_PASSWORD` | `audit.viewer` password |
+| Variable                            | Purpose                                          |
+| ----------------------------------- | ------------------------------------------------ |
+| `KEYCLOAK_HTTP_PORT`                | Loopback port for Keycloak and its Admin Console |
+| `KEYCLOAK_POSTGRES_DB`              | Dedicated Keycloak database name                 |
+| `KEYCLOAK_POSTGRES_USER`            | Dedicated Keycloak database user                 |
+| `KEYCLOAK_POSTGRES_PASSWORD`        | Dedicated Keycloak database password             |
+| `KEYCLOAK_POSTGRES_VOLUME_NAME`     | Exact persistent Keycloak volume name            |
+| `KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME` | Development Admin Console username               |
+| `KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD` | Development Admin Console password               |
+| `KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD` | `equipment.admin` password                       |
+| `KEYCLOAK_SAMPLE_BORROWER_PASSWORD` | `sample.borrower` password                       |
+| `KEYCLOAK_AUDIT_VIEWER_PASSWORD`    | `audit.viewer` password                          |
 
 The committed realm JSON is canonical development configuration. It is imported
 only when the `equipment` realm is absent; an ordinary restart does not reconcile
@@ -180,8 +189,9 @@ migrations, Keycloak PostgreSQL database, Keycloak, development-user bootstrap,
 and API. It waits until the required services are ready. `make seed-dev` is
 optional and loads repeatable development users, inventory, and workflow data.
 
-The API is then available at `http://localhost:8080`, and the Keycloak Admin
-Console is available at `http://localhost:8081/admin`.
+The API is then available at `http://localhost:8080`, the Scalar API reference
+is available at `http://localhost:8080/scalar/`, and the Keycloak Admin Console
+is available at `http://localhost:8081/admin`.
 
 ### Run the API on the host
 
@@ -241,6 +251,39 @@ make compose-down-volumes CONFIRM=YES
 
 </details>
 
+## Explore the API with Scalar
+
+<details>
+<summary><strong>Show Scalar API reference instructions</strong></summary>
+
+The development configuration enables the embedded OpenAPI reference. After
+`make compose-up`, open:
+
+```text
+http://localhost:8080/scalar/
+```
+
+`http://localhost:8080/scalar` redirects to the canonical trailing-slash URL.
+The raw OpenAPI 3.1 document is available at
+`http://localhost:8080/openapi.yaml`.
+
+Scalar UI options live in
+[`server/api_docs/bootstrap.js`](server/api_docs/bootstrap.js). The embedded
+development configuration disables Scalar Agent and developer tools. Rebuild
+the API after changing the theme or other UI options.
+
+Scalar loads a version-pinned browser bundle from jsDelivr and sends test
+requests directly to the same API origin; no Scalar request proxy is used.
+Select **Authorize**, paste a Keycloak access token without the `Bearer` prefix,
+and then send protected requests from the operation pages. The existing
+authentication, capability, and ownership rules apply unchanged.
+
+These documentation routes are public whenever `API_DOCS_ENABLED=true`. Set it
+to `false` for deployments where the API contract must not be exposed. When
+disabled, the routes are not registered.
+
+</details>
+
 ## Test three endpoints with Postman or Bruno
 
 <details>
@@ -255,16 +298,16 @@ Import one of the bundled collections:
 
 The collection is configured for Authorization Code with PKCE:
 
-| Setting | Development value |
-| --- | --- |
-| Authorization URL | `http://localhost:8081/realms/equipment/protocol/openid-connect/auth` |
-| Access token URL | `http://localhost:8081/realms/equipment/protocol/openid-connect/token` |
-| Client ID | `equipment-postman` |
-| Client secret | Empty |
-| Callback URL | `https://oauth.pstmn.io/v1/browser-callback` |
-| Scope | `openid profile email` |
-| PKCE method | `S256` |
-| Token placement | `Authorization: Bearer <access-token>` |
+| Setting           | Development value                                                      |
+| ----------------- | ---------------------------------------------------------------------- |
+| Authorization URL | `http://localhost:8081/realms/equipment/protocol/openid-connect/auth`  |
+| Access token URL  | `http://localhost:8081/realms/equipment/protocol/openid-connect/token` |
+| Client ID         | `equipment-postman`                                                    |
+| Client secret     | Empty                                                                  |
+| Callback URL      | `https://oauth.pstmn.io/v1/browser-callback`                           |
+| Scope             | `openid profile email`                                                 |
+| PKCE method       | `S256`                                                                 |
+| Token placement   | `Authorization: Bearer <access-token>`                                 |
 
 In Postman, use **Get New Access Token** and then **Use Token**. In Bruno, use
 **Get Access Token**. Sign in as `equipment.admin` with the password configured
@@ -361,19 +404,19 @@ local rows are never automatically linked by matching username or email, and
 the local database remains authoritative for profile data, activation,
 ownership, checkout history, and audit attribution.
 
-| Keycloak client role | Application access |
-| --- | --- |
-| `employee` | `/me`, inventory reads, self checkout/return, and own checkout reads |
-| `auditor` | `/me`, inventory reads, all checkout reads, and item-wide history |
-| `inventory_admin` | All current routes, including inventory and user management and on-behalf workflows |
+| Keycloak client role | Application access                                                                  |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| `employee`           | `/me`, inventory reads, self checkout/return, and own checkout reads                |
+| `auditor`            | `/me`, inventory reads, all checkout reads, and item-wide history                   |
+| `inventory_admin`    | All current routes, including inventory and user management and on-behalf workflows |
 
 The canonical development users are:
 
-| Username | Role | Password variable |
-| --- | --- | --- |
+| Username          | Role              | Password variable                   |
+| ----------------- | ----------------- | ----------------------------------- |
 | `equipment.admin` | `inventory_admin` | `KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD` |
-| `sample.borrower` | `employee` | `KEYCLOAK_SAMPLE_BORROWER_PASSWORD` |
-| `audit.viewer` | `auditor` | `KEYCLOAK_AUDIT_VIEWER_PASSWORD` |
+| `sample.borrower` | `employee`        | `KEYCLOAK_SAMPLE_BORROWER_PASSWORD` |
+| `audit.viewer`    | `auditor`         | `KEYCLOAK_AUDIT_VIEWER_PASSWORD`    |
 
 The development Admin Console is available at
 `http://localhost:8081/admin`. Sign in to the `master` realm with

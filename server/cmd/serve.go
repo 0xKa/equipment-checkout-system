@@ -115,6 +115,9 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	server := echo.New()
 	server.HTTPErrorHandler = handlers.NewHTTPErrorHandler(log)
 	middleware.Register(server, log)
+	if cfg.APIDocsEnabled {
+		routes.RegisterAPIDocs(server, handlers.NewAPIDocs())
+	}
 	routes.Register(
 		server,
 		healthHandler,
@@ -129,6 +132,7 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	log.Info("starting HTTP server",
 		zap.String("environment", cfg.AppEnv),
 		zap.String("address", address),
+		zap.Bool("api_docs_enabled", cfg.APIDocsEnabled),
 	)
 
 	shutdownContext, stopSignals := signal.NotifyContext(

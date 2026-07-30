@@ -33,6 +33,7 @@ type Config struct {
 	DBMaxConnections        int32
 	DBMinConnections        int32
 	DBMaxConnectionLifetime time.Duration
+	APIDocsEnabled          bool
 	OIDCIssuerURL           string
 	OIDCJWKSURL             string
 	OIDCAudience            string
@@ -99,6 +100,14 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("DB_MAX_CONNECTION_LIFETIME must be a positive duration")
 	}
 
+	apiDocsEnabled, err := parseExactBool(
+		"API_DOCS_ENABLED",
+		getEnv("API_DOCS_ENABLED", "false"),
+	)
+	if err != nil {
+		return Config{}, err
+	}
+
 	oidcIssuerURL, err := parseHTTPURL(
 		"OIDC_ISSUER_URL",
 		getEnv("OIDC_ISSUER_URL", ""),
@@ -145,6 +154,7 @@ func Load() (Config, error) {
 		DBMaxConnections:        maxConnections,
 		DBMinConnections:        minConnections,
 		DBMaxConnectionLifetime: maxConnectionLifetime,
+		APIDocsEnabled:          apiDocsEnabled,
 		OIDCIssuerURL:           oidcIssuerURL,
 		OIDCJWKSURL:             oidcJWKSURL,
 		OIDCAudience:            oidcAudience,
@@ -177,6 +187,17 @@ func parsePositiveDuration(name, value string) (time.Duration, error) {
 		return 0, fmt.Errorf("%s must be a positive duration", name)
 	}
 	return duration, nil
+}
+
+func parseExactBool(name, value string) (bool, error) {
+	switch value {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("%s must be true or false", name)
+	}
 }
 
 func parseConnectionCount(name, value string, minimum, maximum int64) (int32, error) {

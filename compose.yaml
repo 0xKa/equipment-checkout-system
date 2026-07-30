@@ -134,6 +134,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
       HTTP_HOST: 0.0.0.0
       HTTP_PORT: ${HTTP_PORT:-8080}
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required}?sslmode=disable
       DB_MAX_CONNECTIONS: ${DB_MAX_CONNECTIONS:-10}
       DB_MIN_CONNECTIONS: ${DB_MIN_CONNECTIONS:-1}

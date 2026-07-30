@@ -10,6 +10,13 @@ import (
 
 const maxRequestBodyBytes int64 = 1024 * 1024
 
+func RegisterAPIDocs(e *echo.Echo, apiDocsHandler *handlers.APIDocs) {
+	e.GET("/scalar", apiDocsHandler.Redirect)
+	e.GET("/scalar/", apiDocsHandler.Reference)
+	e.GET("/scalar/bootstrap.js", apiDocsHandler.Bootstrap)
+	e.GET("/openapi.yaml", apiDocsHandler.Specification)
+}
+
 func Register(
 	e *echo.Echo,
 	healthHandler *handlers.Health,
