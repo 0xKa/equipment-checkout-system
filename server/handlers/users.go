@@ -18,7 +18,8 @@ func NewUsers(service services.UserService) *Users {
 	return &Users{service: service}
 }
 
-// Creates an active user from the request body.
+// Starts user creation, delegates Keycloak/PostgreSQL synchronization, and
+// returns the linked user.
 func (h *Users) Create(c *echo.Context) error {
 	var input types.CreateUserRequest
 	if err := utils.DecodeJSON(c, &input); err != nil {

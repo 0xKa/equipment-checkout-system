@@ -91,10 +91,7 @@ func (s *userService) Create(
 		Role:     input.Role,
 		IsActive: true,
 	}
-	// Creation writes the complete Keycloak identity first, then inserts the
-	// linked local row. The local insert is one atomic statement, so it does not
-	// need an explicit PostgreSQL transaction. If it fails, the service deletes
-	// the newly created Keycloak identity before returning failure.
+	// Create in Keycloak, link locally, and remove the identity if linking fails.
 	subject, err := s.identities.Create(ctx, state)
 	if err != nil {
 		if subject != "" {
