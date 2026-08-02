@@ -222,6 +222,9 @@ func (s *userService) SetRole(
 		}
 
 		if err := s.identities.ReplaceRole(ctx, *previous.ExternalSubject, role); err != nil {
+			// Role replacement uses delete-then-add provider calls. Retrying the
+			// previous intended role covers a rare failure between those calls.
+			s.restoreRole(previous)
 			return err
 		}
 		identityChanged = true
