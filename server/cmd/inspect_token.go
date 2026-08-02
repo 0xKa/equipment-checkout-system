@@ -18,17 +18,17 @@ import (
 const tokenInspectionWarning = `Inspection only: "Expired?" compares exp with this machine's clock. Decoding does not validate the signature, issuer, audience, or application access. The API performs those checks.`
 
 type accessTokenClaims struct {
-	Issuer            string                    `json:"iss"`
-	Subject           string                    `json:"sub"`
-	Audience          json.RawMessage           `json:"aud"`
-	AuthorizedParty   string                    `json:"azp"`
-	PreferredUsername string                    `json:"preferred_username"`
-	EmailVerified     *bool                     `json:"email_verified"`
-	ResourceAccess    map[string]resourceAccess `json:"resource_access"`
-	ExpiresAt         *int64                    `json:"exp"`
+	Issuer            string          `json:"iss"`
+	Subject           string          `json:"sub"`
+	Audience          json.RawMessage `json:"aud"`
+	AuthorizedParty   string          `json:"azp"`
+	PreferredUsername string          `json:"preferred_username"`
+	EmailVerified     *bool           `json:"email_verified"`
+	RealmAccess       roleAccess      `json:"realm_access"`
+	ExpiresAt         *int64          `json:"exp"`
 }
 
-type resourceAccess struct {
+type roleAccess struct {
 	Roles []string `json:"roles"`
 }
 
@@ -39,7 +39,7 @@ type accessTokenMetadata struct {
 	AuthorizedParty   string
 	PreferredUsername string
 	EmailVerified     string
-	EquipmentAPIRoles string
+	RealmRoles        string
 	ExpiresAtUTC      string
 	Expired           string
 }
@@ -127,7 +127,7 @@ func decodeAccessTokenMetadata(token string) (accessTokenMetadata, error) {
 		Audience:          strings.Join(audience, ", "),
 		AuthorizedParty:   claims.AuthorizedParty,
 		PreferredUsername: claims.PreferredUsername,
-		EquipmentAPIRoles: strings.Join(claims.ResourceAccess["equipment-api"].Roles, ", "),
+		RealmRoles:        strings.Join(claims.RealmAccess.Roles, ", "),
 		Expired:           "unknown (missing exp)",
 	}
 
@@ -176,7 +176,7 @@ func writeAccessTokenMetadata(output io.Writer, metadata accessTokenMetadata) {
 	fmt.Fprintln(output, "-------------")
 	writeMetadataField(output, "Audience", metadata.Audience)
 	writeMetadataField(output, "Authorized party", metadata.AuthorizedParty)
-	writeMetadataField(output, "Equipment API roles", metadata.EquipmentAPIRoles)
+	writeMetadataField(output, "Realm roles", metadata.RealmRoles)
 
 	fmt.Fprintln(output, "\nExpiration")
 	fmt.Fprintln(output, "----------")

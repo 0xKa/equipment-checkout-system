@@ -22,7 +22,6 @@ type KeycloakIdentityAdminConfig struct {
 	Realm               string
 	ServiceClientID     string
 	ServiceClientSecret string
-	ApplicationClientID string
 	Timeout             time.Duration
 }
 
@@ -94,20 +93,15 @@ func (a *keycloakIdentityAdmin) ReplaceRole(
 	}
 
 	return a.withToken(ctx, func(callCtx context.Context, token string) error {
-		clientUUID, err := a.applicationClientUUID(callCtx, token)
-		if err != nil {
-			return err
-		}
-
-		current, err := a.client.GetClientRolesByUserID(
-			callCtx, token, a.cfg.Realm, clientUUID, subject,
+		current, err := a.client.GetRealmRolesByUserID(
+			callCtx, token, a.cfg.Realm, subject,
 		)
 		if err != nil {
 			return mapIdentityAdminError(err)
 		}
 
-		desired, err := a.client.GetClientRole(
-			callCtx, token, a.cfg.Realm, clientUUID, string(role),
+		desired, err := a.client.GetRealmRole(
+			callCtx, token, a.cfg.Realm, string(role),
 		)
 		if err != nil {
 			return mapIdentityAdminError(err)
@@ -116,31 +110,30 @@ func (a *keycloakIdentityAdmin) ReplaceRole(
 			return types.ErrIdentityAdminUnavailable
 		}
 
-		if len(current) == 1 && current[0] != nil &&
-			current[0].Name != nil && *current[0].Name == string(role) {
+		managed := concreteManagedRoles(current)
+		if len(managed) == 1 && managed[0].Name != nil &&
+			*managed[0].Name == string(role) {
 			return nil
 		}
 
-		previous := concreteRoles(current)
-		if len(previous) > 0 {
-			if err := a.client.DeleteClientRolesFromUser(
-				callCtx, token, a.cfg.Realm, clientUUID, subject, previous,
+		if len(managed) > 0 {
+			if err := a.client.DeleteRealmRoleFromUser(
+				callCtx, token, a.cfg.Realm, subject, managed,
 			); err != nil {
 				return mapIdentityAdminError(err)
 			}
 		}
 
-		if err := a.client.AddClientRolesToUser(
+		if err := a.client.AddRealmRoleToUser(
 			callCtx,
 			token,
 			a.cfg.Realm,
-			clientUUID,
 			subject,
 			[]gocloak.Role{*desired},
 		); err != nil {
-			if len(previous) > 0 {
-				_ = a.client.AddClientRolesToUser(
-					callCtx, token, a.cfg.Realm, clientUUID, subject, previous,
+			if len(managed) > 0 {
+				_ = a.client.AddRealmRoleToUser(
+					callCtx, token, a.cfg.Realm, subject, managed,
 				)
 			}
 			return mapIdentityAdminError(err)
@@ -240,29 +233,10 @@ func (a *keycloakIdentityAdmin) withToken(
 	return operation(callCtx, token.AccessToken)
 }
 
-func (a *keycloakIdentityAdmin) applicationClientUUID(
-	ctx context.Context,
-	token string,
-) (string, error) {
-	clients, err := a.client.GetClients(ctx, token, a.cfg.Realm, gocloak.GetClientsParams{
-		ClientID: stringPointer(a.cfg.ApplicationClientID),
-	})
-	if err != nil {
-		return "", mapIdentityAdminError(err)
-	}
-	for _, client := range clients {
-		if client != nil && client.ClientID != nil && client.ID != nil &&
-			*client.ClientID == a.cfg.ApplicationClientID {
-			return *client.ID, nil
-		}
-	}
-	return "", types.ErrIdentityAdminUnavailable
-}
-
-func concreteRoles(roles []*gocloak.Role) []gocloak.Role {
+func concreteManagedRoles(roles []*gocloak.Role) []gocloak.Role {
 	result := make([]gocloak.Role, 0, len(roles))
 	for _, role := range roles {
-		if role != nil {
+		if role != nil && role.Name != nil && types.UserRole(*role.Name).Valid() {
 			result = append(result, *role)
 		}
 	}

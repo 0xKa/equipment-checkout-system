@@ -11,7 +11,6 @@ set -euo pipefail
 
 readonly KEYCLOAK_SERVER="http://keycloak:8080"
 readonly TARGET_REALM="equipment"
-readonly API_CLIENT_ID="equipment-api"
 readonly USER_SYNC_CLIENT_ID="equipment-user-sync"
 readonly LOGIN_THEME="equipment"
 readonly KCADM="/opt/keycloak/bin/kcadm.sh"
@@ -56,26 +55,11 @@ KC_CLI_PASSWORD="${KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD}" \
   --config "${KCADM_CONFIG}" \
   --set "loginTheme=${LOGIN_THEME}" >/dev/null
 
-api_client_json="$(
-  "${KCADM}" get clients \
-    --config "${KCADM_CONFIG}" \
-    --target-realm "${TARGET_REALM}" \
-    --query "clientId=${API_CLIENT_ID}" \
-    --query "exact=true" \
-    --fields id
-)"
-api_client_uuid="$(printf '%s' "${api_client_json}" | sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
-
-if [[ -z "${api_client_uuid}" ]]; then
-  echo "Required Keycloak client ${API_CLIENT_ID} is missing from realm ${TARGET_REALM}." >&2
-  exit 1
-fi
-
 for role in employee inventory_admin auditor; do
-  if ! "${KCADM}" get "clients/${api_client_uuid}/roles/${role}" \
+  if ! "${KCADM}" get "roles/${role}" \
     --config "${KCADM_CONFIG}" \
     --target-realm "${TARGET_REALM}" >/dev/null; then
-    echo "Required Keycloak role ${API_CLIENT_ID}/${role} is missing." >&2
+    echo "Required Keycloak realm role ${role} is missing." >&2
     exit 1
   fi
 done
@@ -119,7 +103,7 @@ fi
   --uid "${service_account_uuid}" \
   --cclientid realm-management \
   --rolename manage-users \
-  --rolename view-clients >/dev/null
+  --rolename view-realm >/dev/null
 
 set_development_password() {
   local username="$1"

@@ -50,7 +50,6 @@ func runReconcileUsers(command *cobra.Command, _ []string) error {
 			Realm:               cfg.KeycloakAdmin.Realm,
 			ServiceClientID:     cfg.KeycloakAdmin.ServiceClientID,
 			ServiceClientSecret: cfg.KeycloakAdmin.ServiceClientSecret,
-			ApplicationClientID: cfg.KeycloakAdmin.ApplicationClientID,
 			Timeout:             cfg.KeycloakAdmin.Timeout,
 		},
 	)

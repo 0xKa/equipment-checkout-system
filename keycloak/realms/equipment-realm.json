@@ -8,29 +8,27 @@
   "defaultSignatureAlgorithm": "RS256",
   "accessTokenLifespan": 300,
   "roles": {
-    "realm": [],
-    "client": {
-      "equipment-api": [
-        {
-          "name": "employee",
-          "description": "Borrow and return equipment within employee policy.",
-          "composite": false,
-          "clientRole": true
-        },
-        {
-          "name": "inventory_admin",
-          "description": "Administer inventory and act on behalf of borrowers.",
-          "composite": false,
-          "clientRole": true
-        },
-        {
-          "name": "auditor",
-          "description": "Read inventory and audit information without mutating it.",
-          "composite": false,
-          "clientRole": true
-        }
-      ]
-    }
+    "realm": [
+      {
+        "name": "employee",
+        "description": "Borrow and return equipment within employee policy.",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "inventory_admin",
+        "description": "Administer inventory and act on behalf of borrowers.",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "auditor",
+        "description": "Read inventory and audit information without mutating it.",
+        "composite": false,
+        "clientRole": false
+      }
+    ],
+    "client": {}
   },
   "clients": [
     {
@@ -501,14 +499,12 @@
       ]
     }
   ],
-  "clientScopeMappings": {
-    "equipment-api": [
-      {
-        "clientScope": "equipment-api-access",
-        "roles": ["employee", "inventory_admin", "auditor"]
-      }
-    ]
-  },
+  "scopeMappings": [
+    {
+      "clientScope": "equipment-api-access",
+      "roles": ["employee", "inventory_admin", "auditor"]
+    }
+  ],
   "users": [
     {
       "id": "e6549747-b961-4b7f-8b7d-dd894bca6d75",
@@ -522,9 +518,7 @@
         "equipment_display_name": ["Equipment Administrator"]
       },
       "requiredActions": [],
-      "clientRoles": {
-        "equipment-api": ["inventory_admin"]
-      }
+      "realmRoles": ["inventory_admin"]
     },
     {
       "id": "65b693e8-4199-452b-8277-ae9fd2264ac3",
@@ -538,9 +532,7 @@
         "equipment_display_name": ["Sample Borrower"]
       },
       "requiredActions": [],
-      "clientRoles": {
-        "equipment-api": ["employee"]
-      }
+      "realmRoles": ["employee"]
     },
     {
       "id": "16c37149-7558-454f-94c1-73ca1e337541",
@@ -554,9 +546,7 @@
         "equipment_display_name": ["Audit Viewer"]
       },
       "requiredActions": [],
-      "clientRoles": {
-        "equipment-api": ["auditor"]
-      }
+      "realmRoles": ["auditor"]
     }
   ]
 }

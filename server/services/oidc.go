@@ -26,7 +26,6 @@ type OIDCVerifierConfig struct {
 
 type oidcTokenVerifier struct {
 	verifier  *oidc.IDTokenVerifier
-	audience  string
 	clockSkew time.Duration
 	now       func() time.Time
 }
@@ -54,7 +53,6 @@ func NewOIDCTokenVerifier(
 
 	return &oidcTokenVerifier{
 		verifier:  verifier,
-		audience:  cfg.Audience,
 		clockSkew: cfg.ClockSkew,
 		now:       time.Now,
 	}, nil
@@ -89,7 +87,7 @@ func (v *oidcTokenVerifier) Verify(
 		return types.VerifiedIdentity{}, types.ErrInvalidToken
 	}
 
-	roles, ok := clientRoles(claims.ResourceAccess, v.audience)
+	roles, ok := realmRoles(claims.RealmAccess)
 	if !ok {
 		return types.VerifiedIdentity{}, types.ErrInvalidToken
 	}
@@ -109,7 +107,7 @@ type accessTokenClaims struct {
 	ExpiresAt         json.RawMessage `json:"exp"`
 	NotBefore         json.RawMessage `json:"nbf"`
 	IssuedAt          json.RawMessage `json:"iat"`
-	ResourceAccess    json.RawMessage `json:"resource_access"`
+	RealmAccess       json.RawMessage `json:"realm_access"`
 	PreferredUsername string          `json:"preferred_username"`
 	Name              string          `json:"name"`
 	Email             string          `json:"email"`
@@ -155,25 +153,15 @@ func numericDate(raw json.RawMessage) (time.Time, bool) {
 	return time.Unix(seconds, 0), true
 }
 
-func clientRoles(resourceAccess json.RawMessage, audience string) ([]string, bool) {
-	if !hasJSONShape(resourceAccess, '{', '}') {
-		return nil, false
-	}
-
-	var resources map[string]json.RawMessage
-	if err := json.Unmarshal(resourceAccess, &resources); err != nil {
-		return nil, false
-	}
-
-	clientAccess, exists := resources[audience]
-	if !exists || !hasJSONShape(clientAccess, '{', '}') {
+func realmRoles(realmAccess json.RawMessage) ([]string, bool) {
+	if !hasJSONShape(realmAccess, '{', '}') {
 		return nil, false
 	}
 
 	var access struct {
 		Roles json.RawMessage `json:"roles"`
 	}
-	if err := json.Unmarshal(clientAccess, &access); err != nil {
+	if err := json.Unmarshal(realmAccess, &access); err != nil {
 		return nil, false
 	}
 	if !hasJSONShape(access.Roles, '[', ']') {

@@ -13,19 +13,18 @@ import (
 )
 
 const (
-	defaultAppEnv                            = "development"
-	defaultHTTPHost                          = "localhost"
-	defaultPort                              = "8080"
-	defaultDBMaxConnections                  = "10"
-	defaultDBMinConnections                  = "1"
-	defaultDBMaxConnectionLifetime           = "30m"
-	defaultOIDCAudience                      = "equipment-api"
-	defaultOIDCHTTPTimeout                   = "5s"
-	defaultOIDCClockSkew                     = "30s"
-	defaultKeycloakRealm                     = "equipment"
-	defaultKeycloakApplicationClientID       = "equipment-api"
-	defaultKeycloakAdminTimeout              = "5s"
-	maxSupportedDBConnections          int64 = 100
+	defaultAppEnv                        = "development"
+	defaultHTTPHost                      = "localhost"
+	defaultPort                          = "8080"
+	defaultDBMaxConnections              = "10"
+	defaultDBMinConnections              = "1"
+	defaultDBMaxConnectionLifetime       = "30m"
+	defaultOIDCAudience                  = "equipment-api"
+	defaultOIDCHTTPTimeout               = "5s"
+	defaultOIDCClockSkew                 = "30s"
+	defaultKeycloakRealm                 = "equipment"
+	defaultKeycloakAdminTimeout          = "5s"
+	maxSupportedDBConnections      int64 = 100
 )
 
 type Config struct {
@@ -66,7 +65,6 @@ type KeycloakAdminConfig struct {
 	Realm               string
 	ServiceClientID     string
 	ServiceClientSecret string
-	ApplicationClientID string
 	Timeout             time.Duration
 }
 
@@ -140,13 +138,6 @@ func loadKeycloakAdminConfig() (KeycloakAdminConfig, error) {
 	if serviceClientSecret == "" {
 		return KeycloakAdminConfig{}, fmt.Errorf("KEYCLOAK_USER_SYNC_CLIENT_SECRET must not be empty")
 	}
-	applicationClientID := getEnv(
-		"KEYCLOAK_APPLICATION_CLIENT_ID",
-		defaultKeycloakApplicationClientID,
-	)
-	if applicationClientID == "" {
-		return KeycloakAdminConfig{}, fmt.Errorf("KEYCLOAK_APPLICATION_CLIENT_ID must not be empty")
-	}
 	timeout, err := parsePositiveDuration(
 		"KEYCLOAK_ADMIN_TIMEOUT",
 		getEnv("KEYCLOAK_ADMIN_TIMEOUT", defaultKeycloakAdminTimeout),
@@ -160,7 +151,6 @@ func loadKeycloakAdminConfig() (KeycloakAdminConfig, error) {
 		Realm:               realm,
 		ServiceClientID:     serviceClientID,
 		ServiceClientSecret: serviceClientSecret,
-		ApplicationClientID: applicationClientID,
 		Timeout:             timeout,
 	}, nil
 }

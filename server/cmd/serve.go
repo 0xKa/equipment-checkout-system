@@ -104,7 +104,6 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 			Realm:               cfg.KeycloakAdmin.Realm,
 			ServiceClientID:     cfg.KeycloakAdmin.ServiceClientID,
 			ServiceClientSecret: cfg.KeycloakAdmin.ServiceClientSecret,
-			ApplicationClientID: cfg.KeycloakAdmin.ApplicationClientID,
 			Timeout:             cfg.KeycloakAdmin.Timeout,
 		},
 	)
