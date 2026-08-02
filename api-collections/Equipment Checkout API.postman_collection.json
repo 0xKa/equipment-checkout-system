@@ -2,12 +2,15 @@
   "info": {
     "_postman_id": "62cff4fc-9e67-43c2-bdb1-18642a9452b0",
     "name": "Equipment Checkout API",
-    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. Every /api/v1 request inherits the collection's preconfigured OAuth 2.0 Authorization Code (With PKCE) authentication; /health and /ready remain public. In the collection Authorization tab, select Get New Access Token, sign in through the browser, then select Proceed and Use Token. The public client has no client secret. Keep generated tokens local: do not share, sync, export, commit, or paste them into logs.",
+    "description": "Postman Collection v2.1 for the PostgreSQL-backed Equipment Checkout API. Run make compose-up to build the API, start PostgreSQL and Keycloak, apply migrations, bootstrap the realm, and wait for readiness. Seed data remains optional and explicit. Protected folders inherit the collection's preconfigured OAuth 2.0 Authorization Code (With PKCE) authentication; the Health folder explicitly disables authentication for /health and /ready. In the collection Authorization tab, select Get New Access Token, sign in through the browser, then select Proceed and Use Token. The public client has no client secret. Keep generated tokens local: do not share, sync, export, commit, or paste them into logs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "Health",
+      "auth": {
+        "type": "noauth"
+      },
       "item": [
         {
           "name": "Get Health",
@@ -67,6 +70,9 @@
     },
     {
       "name": "Items",
+      "auth": {
+        "type": "inherit"
+      },
       "item": [
         {
           "name": "Create Item",
@@ -233,6 +239,9 @@
     },
     {
       "name": "Categories",
+      "auth": {
+        "type": "inherit"
+      },
       "item": [
         {
           "name": "Create Category",
@@ -325,6 +334,9 @@
     {
       "name": "Users and Authentication",
       "description": "Manages users synchronously in Keycloak and PostgreSQL. User management requires users.manage. Create requests assign exactly one application realm role; profile, role, and activation changes are mirrored. Unknown Keycloak identities are rejected with identity_not_linked.",
+      "auth": {
+        "type": "inherit"
+      },
       "item": [
         {
           "name": "Create User",
@@ -514,6 +526,9 @@
     {
       "name": "Checkouts",
       "description": "Employees may check out and return equipment for themselves and may list/get only their own checkout records. Set borrowerUserId to the employee's local user ID. Inventory administrators may act for any active borrower and read all records; auditors have all-record and item-history reads but no mutation access. Workflow attribution always uses the token-derived local actor.",
+      "auth": {
+        "type": "inherit"
+      },
       "item": [
         {
           "name": "Create Checkout",
@@ -652,6 +667,9 @@
     {
       "name": "Create Multiple Test Items",
       "description": "Run this folder in the Postman Collection Runner to create several sample items. Each request uses the existing single-item POST endpoint.",
+      "auth": {
+        "type": "inherit"
+      },
       "item": [
         {
           "name": "Create Test Laptop",

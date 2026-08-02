@@ -58,13 +58,16 @@ docs:
     Postman and OpenCollection definitions for the PostgreSQL-backed Equipment
     Checkout API. Run `make compose-up` to build the API, start PostgreSQL and
     Keycloak, apply migrations, bootstrap the realm, and wait for readiness.
-    Every `/api/v1` request inherits the collection's OAuth 2.0 Authorization
-    Code with PKCE authentication; `/health` and `/ready` remain public.
+    Protected folders inherit the collection's OAuth 2.0 Authorization Code
+    with PKCE authentication. The Health folder explicitly disables
+    authentication for `/health` and `/ready`.
 items:
   - info:
       name: Health
       type: folder
       seq: 1
+    request:
+      auth: none
     items:
       - info:
           name: Get Health
@@ -90,6 +93,8 @@ items:
       name: Items
       type: folder
       seq: 2
+    request:
+      auth: inherit
     items:
       - info:
           name: Create Item
@@ -174,6 +179,8 @@ items:
       name: Categories
       type: folder
       seq: 3
+    request:
+      auth: inherit
     items:
       - info:
           name: Create Category
@@ -252,6 +259,8 @@ items:
       name: Users and Authentication
       type: folder
       seq: 4
+    request:
+      auth: inherit
     items:
       - info:
           name: Create User
@@ -416,6 +425,8 @@ items:
       name: Checkouts
       type: folder
       seq: 5
+    request:
+      auth: inherit
     items:
       - info:
           name: Create Checkout
@@ -532,6 +543,8 @@ items:
       name: Create Multiple Test Items
       type: folder
       seq: 6
+    request:
+      auth: inherit
     items:
       - info:
           name: Create Test Laptop
