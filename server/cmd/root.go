@@ -16,6 +16,7 @@ func newRootCommand() *cobra.Command {
 
 	root.AddCommand(
 		newInspectTokenCommand(),
+		newReconcileUsersCommand(),
 		newServeCommand(),
 	)
 	return root
