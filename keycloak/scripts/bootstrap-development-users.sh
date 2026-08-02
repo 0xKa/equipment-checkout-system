@@ -53,7 +53,8 @@ KC_CLI_PASSWORD="${KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD}" \
 
 "${KCADM}" update "realms/${TARGET_REALM}" \
   --config "${KCADM_CONFIG}" \
-  --set "loginTheme=${LOGIN_THEME}" >/dev/null
+  --set "loginTheme=${LOGIN_THEME}" \
+  --set "editUsernameAllowed=true" >/dev/null
 
 for role in employee inventory_admin auditor; do
   if ! "${KCADM}" get "roles/${role}" \

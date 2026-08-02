@@ -4,6 +4,7 @@
   "displayName": "Equipment Checkout System",
   "loginTheme": "equipment",
   "enabled": true,
+  "editUsernameAllowed": true,
   "sslRequired": "external",
   "defaultSignatureAlgorithm": "RS256",
   "accessTokenLifespan": 300,
