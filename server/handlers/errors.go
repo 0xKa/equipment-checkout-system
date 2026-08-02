@@ -158,10 +158,6 @@ func serviceError(err error) (int, string, string, bool) {
 		return http.StatusConflict, types.ErrorCodeIdentityAdminNotFound, "linked Keycloak identity was not found", true
 	case errors.Is(err, types.ErrIdentityAdminUnavailable):
 		return http.StatusServiceUnavailable, types.ErrorCodeServiceUnavailable, "Keycloak user administration is unavailable", true
-	case errors.Is(err, types.ErrIdentityConflict):
-		return http.StatusForbidden, types.ErrorCodeIdentityConflict, "identity profile conflicts with an existing local user", true
-	case errors.Is(err, types.ErrIdentityProfileInvalid):
-		return http.StatusForbidden, types.ErrorCodeIdentityProfileInvalid, "identity profile cannot provision a local user", true
 	case errors.Is(err, types.ErrAccountInactive):
 		return http.StatusForbidden, types.ErrorCodeAccountInactive, "local account is inactive", true
 	case errors.Is(err, types.ErrInvalidBorrowerID):
