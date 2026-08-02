@@ -14,8 +14,9 @@ SQLC := go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 REQUIRED_DATABASE_VARIABLES := POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_PORT DATABASE_URL
 REQUIRED_KEYCLOAK_VARIABLES := KEYCLOAK_HTTP_PORT KEYCLOAK_POSTGRES_DB KEYCLOAK_POSTGRES_USER KEYCLOAK_POSTGRES_PASSWORD KEYCLOAK_POSTGRES_VOLUME_NAME KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD KEYCLOAK_SAMPLE_BORROWER_PASSWORD KEYCLOAK_AUDIT_VIEWER_PASSWORD
 REQUIRED_OIDC_VARIABLES := OIDC_ISSUER_URL OIDC_JWKS_URL OIDC_AUDIENCE OIDC_HTTP_TIMEOUT OIDC_CLOCK_SKEW
+REQUIRED_KEYCLOAK_ADMIN_VARIABLES := KEYCLOAK_ADMIN_URL KEYCLOAK_REALM KEYCLOAK_USER_SYNC_CLIENT_ID KEYCLOAK_USER_SYNC_CLIENT_SECRET KEYCLOAK_APPLICATION_CLIENT_ID KEYCLOAK_ADMIN_TIMEOUT
 
-.PHONY: help check-db-env check-keycloak-env check-oidc-env compose-config compose-up compose-down compose-down-volumes db-up keycloak-up keycloak-stop keycloak-reset migrate-up migrate-status migrate-down seed-dev reset-dev sqlc inspect-token run build test
+.PHONY: help check-db-env check-keycloak-env check-oidc-env check-keycloak-admin-env compose-config compose-up compose-down compose-down-volumes db-up keycloak-up keycloak-stop keycloak-reset migrate-up migrate-status migrate-down seed-dev reset-dev sqlc inspect-token reconcile-users run build test
 
 # Validate that the environment file exists and contains every required database setting.
 check-db-env:
@@ -35,8 +36,14 @@ check-oidc-env:
 	$(foreach variable,$(REQUIRED_OIDC_VARIABLES),$(if $(strip $($(variable))),,$(error $(variable) is missing from $(ENV_FILE))))
 	@echo OIDC configuration loaded from $(ENV_FILE).
 
+# Validate the host application's Keycloak Admin API settings.
+check-keycloak-admin-env:
+	$(if $(wildcard $(ENV_FILE)),,$(error Missing $(ENV_FILE); copy server/.env.example and provide local Keycloak Admin API values))
+	$(foreach variable,$(REQUIRED_KEYCLOAK_ADMIN_VARIABLES),$(if $(strip $($(variable))),,$(error $(variable) is missing from $(ENV_FILE))))
+	@echo Keycloak Admin API configuration loaded from $(ENV_FILE).
+
 # Validate the resolved Compose configuration without starting services.
-compose-config: check-db-env check-keycloak-env check-oidc-env
+compose-config: check-db-env check-keycloak-env check-oidc-env check-keycloak-admin-env
 	$(COMPOSE) config --quiet
 
 # Build and start the complete development environment and wait for healthy services.
@@ -107,8 +114,12 @@ sqlc:
 inspect-token:
 	cd server && go run . inspect-token
 
+# Reconcile local user intent into the configured Keycloak realm once.
+reconcile-users: check-db-env check-oidc-env check-keycloak-admin-env
+	cd server && go run . reconcile-users
+
 # Start the API server locally through its serve command.
-run: check-db-env check-oidc-env
+run: check-db-env check-oidc-env check-keycloak-admin-env
 	cd server && go run . serve
 
 # Compile every Go package from the server module directory.
@@ -149,6 +160,7 @@ help:
 	@echo "Development:"
 	@echo "  sqlc                 Generate Go database code"
 	@echo "  inspect-token        Decode allowlisted access-token metadata"
+	@echo "  reconcile-users      Reconcile local users into Keycloak once"
 	@echo "  run                  Run the API on the host"
 	@echo "  build                Build all Go packages"
 	@echo "  test                 Run all Go tests"

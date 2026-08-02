@@ -138,12 +138,26 @@ func serviceError(err error) (int, string, string, bool) {
 		return http.StatusConflict, types.ErrorCodeUsernameConflict, "username already exists", true
 	case errors.Is(err, types.ErrUserEmailConflict):
 		return http.StatusConflict, types.ErrorCodeUserEmailConflict, "email already exists", true
+	case errors.Is(err, types.ErrInvalidUserRole):
+		return http.StatusBadRequest, types.ErrorCodeInvalidUserRole, "role must be employee, inventory_admin, or auditor", true
+	case errors.Is(err, types.ErrInvalidPassword):
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "password must not be empty", true
 	case errors.Is(err, types.ErrAuthenticationRequired):
 		return http.StatusUnauthorized, types.ErrorCodeAuthenticationRequired, "authentication is required", true
 	case errors.Is(err, types.ErrInvalidToken):
 		return http.StatusUnauthorized, types.ErrorCodeInvalidToken, "access token is invalid", true
 	case errors.Is(err, types.ErrForbidden):
 		return http.StatusForbidden, types.ErrorCodeForbidden, "access is forbidden", true
+	case errors.Is(err, types.ErrIdentityNotLinked):
+		return http.StatusForbidden, types.ErrorCodeIdentityNotLinked, "identity is not linked to a local user", true
+	case errors.Is(err, types.ErrUserIdentityUnlinked):
+		return http.StatusConflict, types.ErrorCodeUserIdentityUnlinked, "local user is not linked to a managed Keycloak identity", true
+	case errors.Is(err, types.ErrIdentityAdminConflict):
+		return http.StatusConflict, types.ErrorCodeIdentityAdminConflict, "username or email conflicts with an existing Keycloak user", true
+	case errors.Is(err, types.ErrIdentityAdminNotFound):
+		return http.StatusConflict, types.ErrorCodeIdentityAdminNotFound, "linked Keycloak identity was not found", true
+	case errors.Is(err, types.ErrIdentityAdminUnavailable):
+		return http.StatusServiceUnavailable, types.ErrorCodeServiceUnavailable, "Keycloak user administration is unavailable", true
 	case errors.Is(err, types.ErrIdentityConflict):
 		return http.StatusForbidden, types.ErrorCodeIdentityConflict, "identity profile conflicts with an existing local user", true
 	case errors.Is(err, types.ErrIdentityProfileInvalid):

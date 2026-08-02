@@ -6,18 +6,12 @@ import (
 	"github.com/0xKa/equipment-checkout-system/server/types"
 )
 
-const (
-	roleEmployee       = "employee"
-	roleInventoryAdmin = "inventory_admin"
-	roleAuditor        = "auditor"
-)
-
 var roleCapabilities = map[string]types.CapabilitySet{
-	roleEmployee: types.NewCapabilitySet(
+	string(types.UserRoleEmployee): types.NewCapabilitySet(
 		types.CapabilityInventoryRead,
 		types.CapabilityCheckoutSelf,
 	),
-	roleInventoryAdmin: types.NewCapabilitySet(
+	string(types.UserRoleInventoryAdmin): types.NewCapabilitySet(
 		types.CapabilityInventoryRead,
 		types.CapabilityInventoryManage,
 		types.CapabilityUsersManage,
@@ -25,7 +19,7 @@ var roleCapabilities = map[string]types.CapabilitySet{
 		types.CapabilityCheckoutManage,
 		types.CapabilityCheckoutHistoryReadAll,
 	),
-	roleAuditor: types.NewCapabilitySet(
+	string(types.UserRoleAuditor): types.NewCapabilitySet(
 		types.CapabilityInventoryRead,
 		types.CapabilityCheckoutHistoryReadAll,
 	),
@@ -37,7 +31,7 @@ type TokenVerifier interface {
 }
 
 type AuthenticationService interface {
-	// Authenticates a token as an active existing or JIT-provisioned actor.
+	// Authenticates a token as one active, pre-linked local actor.
 	Authenticate(ctx context.Context, rawToken string) (types.Actor, error)
 }
 
@@ -83,17 +77,17 @@ func (s *authenticationService) Authenticate(
 }
 
 func capabilitiesForRoles(roles []string) (types.CapabilitySet, bool) {
-	var capabilities types.CapabilitySet
-	recognized := false
+	var recognized types.CapabilitySet
+	recognizedCount := 0
 
 	for _, role := range roles {
 		roleSet, ok := roleCapabilities[role]
 		if !ok {
 			continue
 		}
-		capabilities = capabilities.Union(roleSet)
-		recognized = true
+		recognized = roleSet
+		recognizedCount++
 	}
 
-	return capabilities, recognized
+	return recognized, recognizedCount == 1
 }

@@ -73,7 +73,10 @@ func Register(
 	users.GET("", userHandler.List, requireUsersManage)
 	users.GET("/:id", userHandler.Get, requireUsersManage)
 	users.PUT("/:id", userHandler.Update, requireUsersManage)
+	users.DELETE("/:id", userHandler.Deprovision, requireUsersManage)
+	users.PATCH("/:id/role", userHandler.SetRole, requireUsersManage)
 	users.PATCH("/:id/status", userHandler.SetStatus, requireUsersManage)
+	users.PUT("/:id/temporary-password", userHandler.SetTemporaryPassword, requireUsersManage)
 
 	checkouts := v1.Group("/checkouts")
 	checkouts.GET("", checkoutHandler.List, requireCheckoutSelfOrHistoryReadAll)

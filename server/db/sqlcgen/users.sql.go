@@ -13,52 +13,8 @@ const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     username,
     email,
-    display_name
-) VALUES (
-    $1,
-    $2,
-    $3
-)
-RETURNING
-    id,
-    username,
-    email,
     display_name,
-    is_active,
-    created_at,
-    updated_at,
-    identity_issuer,
-    external_subject
-`
-
-type CreateUserParams struct {
-	Username    string
-	Email       *string
-	DisplayName string
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Email, arg.DisplayName)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.DisplayName,
-		&i.IsActive,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.IdentityIssuer,
-		&i.ExternalSubject,
-	)
-	return i, err
-}
-
-const createUserWithExternalIdentity = `-- name: CreateUserWithExternalIdentity :one
-INSERT INTO users (
-    username,
-    email,
-    display_name,
+    role,
     identity_issuer,
     external_subject
 ) VALUES (
@@ -66,7 +22,8 @@ INSERT INTO users (
     $2,
     $3,
     $4,
-    $5
+    $5,
+    $6
 )
 RETURNING
     id,
@@ -77,22 +34,25 @@ RETURNING
     created_at,
     updated_at,
     identity_issuer,
-    external_subject
+    external_subject,
+    role
 `
 
-type CreateUserWithExternalIdentityParams struct {
+type CreateUserParams struct {
 	Username        string
 	Email           *string
 	DisplayName     string
+	Role            string
 	IdentityIssuer  *string
 	ExternalSubject *string
 }
 
-func (q *Queries) CreateUserWithExternalIdentity(ctx context.Context, arg CreateUserWithExternalIdentityParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUserWithExternalIdentity,
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createUser,
 		arg.Username,
 		arg.Email,
 		arg.DisplayName,
+		arg.Role,
 		arg.IdentityIssuer,
 		arg.ExternalSubject,
 	)
@@ -107,6 +67,7 @@ func (q *Queries) CreateUserWithExternalIdentity(ctx context.Context, arg Create
 		&i.UpdatedAt,
 		&i.IdentityIssuer,
 		&i.ExternalSubject,
+		&i.Role,
 	)
 	return i, err
 }
@@ -121,7 +82,8 @@ SELECT
     created_at,
     updated_at,
     identity_issuer,
-    external_subject
+    external_subject,
+    role
 FROM users
 WHERE id = $1
 `
@@ -139,6 +101,7 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.UpdatedAt,
 		&i.IdentityIssuer,
 		&i.ExternalSubject,
+		&i.Role,
 	)
 	return i, err
 }
@@ -153,7 +116,8 @@ SELECT
     created_at,
     updated_at,
     identity_issuer,
-    external_subject
+    external_subject,
+    role
 FROM users
 WHERE identity_issuer = $1
   AND external_subject = $2
@@ -177,6 +141,88 @@ func (q *Queries) GetUserByExternalIdentity(ctx context.Context, arg GetUserByEx
 		&i.UpdatedAt,
 		&i.IdentityIssuer,
 		&i.ExternalSubject,
+		&i.Role,
+	)
+	return i, err
+}
+
+const getUserForUpdate = `-- name: GetUserForUpdate :one
+SELECT
+    id,
+    username,
+    email,
+    display_name,
+    is_active,
+    created_at,
+    updated_at,
+    identity_issuer,
+    external_subject,
+    role
+FROM users
+WHERE id = $1
+FOR UPDATE
+`
+
+func (q *Queries) GetUserForUpdate(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getUserForUpdate, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.DisplayName,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
+		&i.Role,
+	)
+	return i, err
+}
+
+const linkUserExternalIdentity = `-- name: LinkUserExternalIdentity :one
+UPDATE users
+SET
+    identity_issuer = $1,
+    external_subject = $2,
+    updated_at = GREATEST(statement_timestamp(), updated_at + INTERVAL '1 microsecond')
+WHERE id = $3
+  AND identity_issuer IS NULL
+  AND external_subject IS NULL
+RETURNING
+    id,
+    username,
+    email,
+    display_name,
+    is_active,
+    created_at,
+    updated_at,
+    identity_issuer,
+    external_subject,
+    role
+`
+
+type LinkUserExternalIdentityParams struct {
+	IdentityIssuer  *string
+	ExternalSubject *string
+	ID              int64
+}
+
+func (q *Queries) LinkUserExternalIdentity(ctx context.Context, arg LinkUserExternalIdentityParams) (User, error) {
+	row := q.db.QueryRow(ctx, linkUserExternalIdentity, arg.IdentityIssuer, arg.ExternalSubject, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.DisplayName,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
+		&i.Role,
 	)
 	return i, err
 }
@@ -191,7 +237,8 @@ SELECT
     created_at,
     updated_at,
     identity_issuer,
-    external_subject
+    external_subject,
+    role
 FROM users
 WHERE $1::boolean IS NULL
    OR is_active = $1
@@ -217,6 +264,7 @@ func (q *Queries) ListUsers(ctx context.Context, isActive *bool) ([]User, error)
 			&i.UpdatedAt,
 			&i.IdentityIssuer,
 			&i.ExternalSubject,
+			&i.Role,
 		); err != nil {
 			return nil, err
 		}
@@ -243,7 +291,8 @@ RETURNING
     created_at,
     updated_at,
     identity_issuer,
-    external_subject
+    external_subject,
+    role
 `
 
 type SetUserActiveParams struct {
@@ -264,6 +313,49 @@ func (q *Queries) SetUserActive(ctx context.Context, arg SetUserActiveParams) (U
 		&i.UpdatedAt,
 		&i.IdentityIssuer,
 		&i.ExternalSubject,
+		&i.Role,
+	)
+	return i, err
+}
+
+const setUserRole = `-- name: SetUserRole :one
+UPDATE users
+SET
+    role = $1,
+    updated_at = GREATEST(statement_timestamp(), updated_at + INTERVAL '1 microsecond')
+WHERE id = $2
+RETURNING
+    id,
+    username,
+    email,
+    display_name,
+    is_active,
+    created_at,
+    updated_at,
+    identity_issuer,
+    external_subject,
+    role
+`
+
+type SetUserRoleParams struct {
+	Role string
+	ID   int64
+}
+
+func (q *Queries) SetUserRole(ctx context.Context, arg SetUserRoleParams) (User, error) {
+	row := q.db.QueryRow(ctx, setUserRole, arg.Role, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.DisplayName,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IdentityIssuer,
+		&i.ExternalSubject,
+		&i.Role,
 	)
 	return i, err
 }
@@ -285,7 +377,8 @@ RETURNING
     created_at,
     updated_at,
     identity_issuer,
-    external_subject
+    external_subject,
+    role
 `
 
 type UpdateUserParams struct {
@@ -313,6 +406,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.IdentityIssuer,
 		&i.ExternalSubject,
+		&i.Role,
 	)
 	return i, err
 }

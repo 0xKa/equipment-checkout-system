@@ -90,6 +90,7 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	defer pool.Close()
 
 	queries := sqlcgen.New(pool)
+	transactionManager := db.NewTransactionManager(pool, queries)
 
 	itemService := services.NewItemService(queries)
 	itemHandler := handlers.NewItems(itemService)
@@ -97,7 +98,23 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	categoryService := services.NewCategoryService(queries)
 	categoryHandler := handlers.NewCategories(categoryService)
 
-	userService := services.NewUserService(queries)
+	identityAdmin := services.NewKeycloakIdentityAdmin(
+		services.KeycloakIdentityAdminConfig{
+			BaseURL:             cfg.KeycloakAdmin.BaseURL,
+			Realm:               cfg.KeycloakAdmin.Realm,
+			ServiceClientID:     cfg.KeycloakAdmin.ServiceClientID,
+			ServiceClientSecret: cfg.KeycloakAdmin.ServiceClientSecret,
+			ApplicationClientID: cfg.KeycloakAdmin.ApplicationClientID,
+			Timeout:             cfg.KeycloakAdmin.Timeout,
+		},
+	)
+	userService := services.NewUserService(
+		queries,
+		transactionManager,
+		identityAdmin,
+		cfg.OIDC.IssuerURL,
+		log,
+	)
 	userHandler := handlers.NewUsers(userService)
 	identityResolver := services.NewIdentityResolver(queries)
 	authenticationService := services.NewAuthenticationService(
@@ -106,7 +123,6 @@ func runServe(_ *cobra.Command, _ []string) (runErr error) {
 	)
 	requireBearer := middleware.RequireBearer(authenticationService)
 
-	transactionManager := db.NewTransactionManager(pool, queries)
 	checkoutService := services.NewCheckoutService(queries, transactionManager)
 	checkoutHandler := handlers.NewCheckouts(checkoutService)
 

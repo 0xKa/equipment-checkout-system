@@ -70,12 +70,32 @@ func (h *Users) Update(c *echo.Context) error {
 		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "user id must be a positive integer")
 	}
 
-	var input types.UpdateUserRequest
+	var input types.UpdateUserProfileRequest
 	if err := utils.DecodeJSON(c, &input); err != nil {
 		return writeJSONError(c, err)
 	}
 
-	user, err := h.service.Update(c.Request().Context(), id, input)
+	user, err := h.service.UpdateProfile(c.Request().Context(), id, input)
+	if err != nil {
+		return writeServiceError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, types.UserResponse{Data: user})
+}
+
+// Changes the user's single application role.
+func (h *Users) SetRole(c *echo.Context) error {
+	id, err := utils.ParseID(c.Param("id"))
+	if err != nil {
+		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "user id must be a positive integer")
+	}
+
+	var input types.UpdateUserRoleRequest
+	if err := utils.DecodeJSON(c, &input); err != nil {
+		return writeJSONError(c, err)
+	}
+
+	user, err := h.service.SetRole(c.Request().Context(), id, input.Role)
 	if err != nil {
 		return writeServiceError(c, err)
 	}
@@ -104,6 +124,39 @@ func (h *Users) SetStatus(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, types.UserResponse{Data: user})
+}
+
+// Disables the linked identity while preserving the local user and history.
+func (h *Users) Deprovision(c *echo.Context) error {
+	id, err := utils.ParseID(c.Param("id"))
+	if err != nil {
+		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "user id must be a positive integer")
+	}
+
+	if err := h.service.Deprovision(c.Request().Context(), id); err != nil {
+		return writeServiceError(c, err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// Sends a temporary credential directly to Keycloak without returning it.
+func (h *Users) SetTemporaryPassword(c *echo.Context) error {
+	id, err := utils.ParseID(c.Param("id"))
+	if err != nil {
+		return writeAPIError(c, http.StatusBadRequest, types.ErrorCodeInvalidRequest, "user id must be a positive integer")
+	}
+
+	var input types.SetTemporaryPasswordRequest
+	if err := utils.DecodeJSON(c, &input); err != nil {
+		return writeJSONError(c, err)
+	}
+	if err := h.service.SetTemporaryPassword(
+		c.Request().Context(), id, input.Password,
+	); err != nil {
+		return writeServiceError(c, err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 // Returns the active actor stored in the request context.

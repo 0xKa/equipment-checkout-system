@@ -13,16 +13,19 @@ import (
 )
 
 const (
-	defaultAppEnv                        = "development"
-	defaultHTTPHost                      = "localhost"
-	defaultPort                          = "8080"
-	defaultDBMaxConnections              = "10"
-	defaultDBMinConnections              = "1"
-	defaultDBMaxConnectionLifetime       = "30m"
-	defaultOIDCAudience                  = "equipment-api"
-	defaultOIDCHTTPTimeout               = "5s"
-	defaultOIDCClockSkew                 = "30s"
-	maxSupportedDBConnections      int64 = 100
+	defaultAppEnv                            = "development"
+	defaultHTTPHost                          = "localhost"
+	defaultPort                              = "8080"
+	defaultDBMaxConnections                  = "10"
+	defaultDBMinConnections                  = "1"
+	defaultDBMaxConnectionLifetime           = "30m"
+	defaultOIDCAudience                      = "equipment-api"
+	defaultOIDCHTTPTimeout                   = "5s"
+	defaultOIDCClockSkew                     = "30s"
+	defaultKeycloakRealm                     = "equipment"
+	defaultKeycloakApplicationClientID       = "equipment-api"
+	defaultKeycloakAdminTimeout              = "5s"
+	maxSupportedDBConnections          int64 = 100
 )
 
 type Config struct {
@@ -30,6 +33,7 @@ type Config struct {
 	HTTP           HTTPConfig
 	Database       DatabaseConfig
 	OIDC           OIDCConfig
+	KeycloakAdmin  KeycloakAdminConfig
 	APIDocsEnabled bool
 }
 
@@ -55,6 +59,15 @@ type OIDCConfig struct {
 	Audience    string
 	HTTPTimeout time.Duration
 	ClockSkew   time.Duration
+}
+
+type KeycloakAdminConfig struct {
+	BaseURL             string
+	Realm               string
+	ServiceClientID     string
+	ServiceClientSecret string
+	ApplicationClientID string
+	Timeout             time.Duration
 }
 
 func Load() (Config, error) {
@@ -90,12 +103,65 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	keycloakAdminConfig, err := loadKeycloakAdminConfig()
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		AppEnv:         appEnv,
 		HTTP:           httpConfig,
 		Database:       databaseConfig,
 		APIDocsEnabled: apiDocsEnabled,
 		OIDC:           oidcConfig,
+		KeycloakAdmin:  keycloakAdminConfig,
+	}, nil
+}
+
+func loadKeycloakAdminConfig() (KeycloakAdminConfig, error) {
+	baseURL, err := parseHTTPURL(
+		"KEYCLOAK_ADMIN_URL",
+		getEnv("KEYCLOAK_ADMIN_URL", ""),
+		false,
+	)
+	if err != nil {
+		return KeycloakAdminConfig{}, err
+	}
+
+	realm := getEnv("KEYCLOAK_REALM", defaultKeycloakRealm)
+	if realm == "" {
+		return KeycloakAdminConfig{}, fmt.Errorf("KEYCLOAK_REALM must not be empty")
+	}
+	serviceClientID := getEnv("KEYCLOAK_USER_SYNC_CLIENT_ID", "")
+	if serviceClientID == "" {
+		return KeycloakAdminConfig{}, fmt.Errorf("KEYCLOAK_USER_SYNC_CLIENT_ID must not be empty")
+	}
+	serviceClientSecret := getEnv("KEYCLOAK_USER_SYNC_CLIENT_SECRET", "")
+	if serviceClientSecret == "" {
+		return KeycloakAdminConfig{}, fmt.Errorf("KEYCLOAK_USER_SYNC_CLIENT_SECRET must not be empty")
+	}
+	applicationClientID := getEnv(
+		"KEYCLOAK_APPLICATION_CLIENT_ID",
+		defaultKeycloakApplicationClientID,
+	)
+	if applicationClientID == "" {
+		return KeycloakAdminConfig{}, fmt.Errorf("KEYCLOAK_APPLICATION_CLIENT_ID must not be empty")
+	}
+	timeout, err := parsePositiveDuration(
+		"KEYCLOAK_ADMIN_TIMEOUT",
+		getEnv("KEYCLOAK_ADMIN_TIMEOUT", defaultKeycloakAdminTimeout),
+	)
+	if err != nil {
+		return KeycloakAdminConfig{}, err
+	}
+
+	return KeycloakAdminConfig{
+		BaseURL:             baseURL,
+		Realm:               realm,
+		ServiceClientID:     serviceClientID,
+		ServiceClientSecret: serviceClientSecret,
+		ApplicationClientID: applicationClientID,
+		Timeout:             timeout,
 	}, nil
 }
 

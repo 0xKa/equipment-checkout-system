@@ -126,4 +126,5 @@ type User struct {
 	UpdatedAt       pgtype.Timestamptz
 	IdentityIssuer  *string
 	ExternalSubject *string
+	Role            string
 }

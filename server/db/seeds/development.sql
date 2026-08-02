@@ -1,32 +1,32 @@
 -- Repeatable sample data for local development only.
 -- Apply the schema migrations before running this script.
 
-INSERT INTO users (username, email, display_name)
-SELECT 'equipment.admin', 'admin@example.test', 'Equipment Administrator'
+INSERT INTO users (username, email, display_name, role)
+SELECT 'equipment.admin', 'admin@example.test', 'Equipment Administrator', 'inventory_admin'
 WHERE NOT EXISTS (
     SELECT 1
     FROM users
     WHERE lower(btrim(username)) = 'equipment.admin'
 );
 
-INSERT INTO users (username, email, display_name)
-SELECT 'sample.borrower', 'borrower@example.test', 'Sample Borrower'
+INSERT INTO users (username, email, display_name, role)
+SELECT 'sample.borrower', 'borrower@example.test', 'Sample Borrower', 'employee'
 WHERE NOT EXISTS (
     SELECT 1
     FROM users
     WHERE lower(btrim(username)) = 'sample.borrower'
 );
 
-INSERT INTO users (username, email, display_name)
-SELECT 'audit.viewer', 'audit@example.test', 'Audit Viewer'
+INSERT INTO users (username, email, display_name, role)
+SELECT 'audit.viewer', 'audit@example.test', 'Audit Viewer', 'auditor'
 WHERE NOT EXISTS (
     SELECT 1
     FROM users
     WHERE lower(btrim(username)) = 'audit.viewer'
 );
 
-INSERT INTO users (username, email, display_name)
-SELECT 'maintenance.tech', 'technician@example.test', 'Maintenance Technician'
+INSERT INTO users (username, email, display_name, role)
+SELECT 'maintenance.tech', 'technician@example.test', 'Maintenance Technician', 'employee'
 WHERE NOT EXISTS (
     SELECT 1
     FROM users
