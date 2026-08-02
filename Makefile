@@ -16,7 +16,7 @@ REQUIRED_KEYCLOAK_VARIABLES := KEYCLOAK_HTTP_PORT KEYCLOAK_POSTGRES_DB KEYCLOAK_
 REQUIRED_OIDC_VARIABLES := OIDC_ISSUER_URL OIDC_JWKS_URL OIDC_AUDIENCE OIDC_HTTP_TIMEOUT OIDC_CLOCK_SKEW
 REQUIRED_KEYCLOAK_ADMIN_VARIABLES := KEYCLOAK_ADMIN_URL KEYCLOAK_REALM KEYCLOAK_USER_SYNC_CLIENT_ID KEYCLOAK_USER_SYNC_CLIENT_SECRET KEYCLOAK_ADMIN_TIMEOUT
 
-.PHONY: help check-db-env check-keycloak-env check-oidc-env check-keycloak-admin-env compose-config compose-up compose-down compose-down-volumes db-up keycloak-up keycloak-stop keycloak-reset migrate-up migrate-status migrate-down seed-dev reset-dev sqlc inspect-token reconcile-users run build test
+.PHONY: help check-db-env check-keycloak-env check-oidc-env check-keycloak-admin-env dev-up compose-config compose-up compose-down compose-down-volumes db-up keycloak-up keycloak-stop keycloak-reset migrate-up migrate-status migrate-down seed-dev reset-dev sqlc inspect-token reconcile-users run build test
 
 # Validate that the environment file exists and contains every required database setting.
 check-db-env:
@@ -49,6 +49,12 @@ compose-config: check-db-env check-keycloak-env check-oidc-env check-keycloak-ad
 # Build and start the complete development environment and wait for healthy services.
 compose-up: compose-config
 	$(COMPOSE) up --detach --build --wait
+
+# Prepare a presentation-ready development environment by starting services,
+# seeding application data, and synchronizing every local user with Keycloak.
+dev-up: compose-up
+	$(MAKE) seed-dev
+	$(MAKE) reconcile-users
 
 # Stop the Compose project without removing its named volumes.
 compose-down: check-db-env check-keycloak-env
@@ -142,6 +148,7 @@ help:
 	@echo "  compose-config       Validate the resolved Compose configuration"
 	@echo ""
 	@echo "Environment:"
+	@echo "  dev-up               Start, seed, and synchronize the development environment"
 	@echo "  compose-up           Build and start the complete environment"
 	@echo "  compose-down         Stop the complete environment and preserve volumes"
 	@echo "  compose-down-volumes Stop the environment and delete volumes (CONFIRM=YES)"

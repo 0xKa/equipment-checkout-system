@@ -189,15 +189,16 @@ realm changes.
 After creating `server/.env`, run:
 
 ```text
-make compose-up
+make dev-up
 make migrate-status
-make seed-dev
 ```
 
-`make compose-up` builds and starts the application PostgreSQL database,
-migrations, Keycloak PostgreSQL database, Keycloak, development-user bootstrap,
-and API. It waits until the required services are ready. `make seed-dev` is
-optional and loads repeatable development users, inventory, and workflow data.
+`make dev-up` builds and starts the application PostgreSQL database, migrations,
+Keycloak PostgreSQL database, Keycloak, development-user bootstrap, and API. It
+waits until the required services are ready, loads repeatable application data,
+and reconciles every local development user into Keycloak. Use `make compose-up`
+instead when you intentionally want the running infrastructure with no optional
+application seed data.
 
 The API is then available at `http://localhost:8080`, the Scalar API reference
 is available at `http://localhost:8080/scalar/`, and the Keycloak Admin Console
