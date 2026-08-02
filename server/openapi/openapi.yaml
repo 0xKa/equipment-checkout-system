@@ -422,14 +422,14 @@ paths:
     post:
       tags: [Users]
       operationId: createUser
-      summary: Create a local user
-      description: Requires `users.manage`. New users are active and are not identity-linked automatically.
+      summary: Create a managed user
+      description: Requires `users.manage`. Creates an active Keycloak identity with one client role and a linked local user.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserInput"
+              $ref: "#/components/schemas/CreateUserInput"
       responses:
         "201":
           $ref: "#/components/responses/User"
@@ -445,6 +445,8 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "504":
           $ref: "#/components/responses/RequestTimeout"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
   /api/v1/users/{id}:
@@ -473,14 +475,14 @@ paths:
     put:
       tags: [Users]
       operationId: replaceUser
-      summary: Replace a local user profile
-      description: Requires `users.manage`. Preserves activation status.
+      summary: Replace a managed user profile
+      description: Requires `users.manage`. Synchronizes Keycloak and PostgreSQL while preserving role and activation.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserInput"
+              $ref: "#/components/schemas/UserProfileInput"
       responses:
         "200":
           $ref: "#/components/responses/User"
@@ -498,6 +500,67 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "504":
           $ref: "#/components/responses/RequestTimeout"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Users]
+      operationId: deprovisionUser
+      summary: Soft-deprovision a managed user
+      description: Requires `users.manage`. Disables Keycloak and marks the local user inactive without deleting history.
+      responses:
+        "204":
+          description: The managed user was disabled in both systems.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/users/{id}/role:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    patch:
+      tags: [Users]
+      operationId: updateUserRole
+      summary: Replace a managed user's application role
+      description: Requires `users.manage`. Replaces only `equipment-api` client roles and updates the local role column.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRoleRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
         "500":
           $ref: "#/components/responses/InternalError"
   /api/v1/users/{id}/status:
@@ -506,8 +569,8 @@ paths:
     patch:
       tags: [Users]
       operationId: updateUserStatus
-      summary: Activate or deactivate a local user
-      description: Requires `users.manage`.
+      summary: Activate or deactivate a managed user
+      description: Requires `users.manage`. Synchronizes Keycloak `enabled` and the local activation flag.
       requestBody:
         required: true
         content:
@@ -525,8 +588,47 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "504":
+          $ref: "#/components/responses/RequestTimeout"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/users/{id}/temporary-password:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    put:
+      tags: [Users]
+      operationId: setTemporaryUserPassword
+      summary: Set a temporary Keycloak password
+      description: Requires `users.manage`. The password is sent directly to Keycloak and is never stored or returned by the application.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetTemporaryPasswordRequest"
+      responses:
+        "204":
+          description: Temporary password set; Keycloak requires replacement at next sign-in.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
         "504":
           $ref: "#/components/responses/RequestTimeout"
         "500":
@@ -723,7 +825,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     ServiceUnavailable:
-      description: PostgreSQL did not respond to the readiness probe.
+      description: PostgreSQL readiness or bounded Keycloak user administration is unavailable.
       content:
         application/json:
           schema:
@@ -779,27 +881,67 @@ components:
           type: string
           default: ""
           example: Portable computers
-    UserInput:
+    UserProfileInput:
       type: object
       additionalProperties: false
       required: [username, display_name]
       properties:
         username:
           type: string
-          minLength: 1
+          minLength: 3
+          maxLength: 255
           description: Unique username after trimming and case folding.
           example: j.smith
         email:
           type: [string, "null"]
           format: email
+          maxLength: 255
           default: null
           description: Optional unique email stored in lowercase.
           example: j.smith@example.test
         display_name:
           type: string
           minLength: 1
+          maxLength: 255
           description: User-facing name after trimming.
           example: Jordan Smith
+    CreateUserInput:
+      type: object
+      additionalProperties: false
+      required: [username, display_name, role]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 255
+          description: Unique username after trimming and case folding.
+          example: j.smith
+        email:
+          type: [string, "null"]
+          format: email
+          maxLength: 255
+          default: null
+          description: Optional unique email stored in lowercase.
+          example: j.smith@example.test
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Exact application display name mirrored to Keycloak.
+          example: Jordan Smith
+        role:
+          $ref: "#/components/schemas/UserRole"
+    UserRole:
+      type: string
+      enum: [employee, inventory_admin, auditor]
+      example: employee
+    UpdateUserRoleRequest:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
+        role:
+          $ref: "#/components/schemas/UserRole"
     UpdateUserStatusRequest:
       type: object
       additionalProperties: false
@@ -807,6 +949,16 @@ components:
       properties:
         is_active:
           type: boolean
+    SetTemporaryPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+          format: password
+          minLength: 1
+          writeOnly: true
     CreateCheckoutRequest:
       type: object
       additionalProperties: false
@@ -887,7 +1039,7 @@ components:
     User:
       type: object
       additionalProperties: false
-      required: [id, username, email, display_name, is_active, created_at, updated_at]
+      required: [id, username, email, display_name, role, is_active, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -900,6 +1052,8 @@ components:
           format: email
         display_name:
           type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
         is_active:
           type: boolean
         created_at:

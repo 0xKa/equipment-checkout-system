@@ -24,19 +24,21 @@ flowchart LR
 
     F --> G["OIDC verifier and cached Keycloak JWKS"]
     G --> H["Exact issuer and subject identity resolution"]
-    H --> I["Existing local user or safe JIT provisioning"]
+    H --> I["Existing exact linked local user"]
     I --> J["Capability authorization middleware"]
     J --> K["HTTP handler"]
 
     E --> L["HTTP response"]
     K --> M["Domain service"]
     M --> N["sqlc query or database transaction"]
+    M --> Q["Bounded Keycloak Admin API adapter"]
     N --> O["pgxpool"]
     O --> P["PostgreSQL"]
     P --> N
     N --> M
     M --> K
     K --> L
+    Q --> M
 ```
 
 ## Project structure
@@ -162,10 +164,19 @@ public localhost issuer configured in `OIDC_ISSUER_URL`.
 | `KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD` | `equipment.admin` password                       |
 | `KEYCLOAK_SAMPLE_BORROWER_PASSWORD` | `sample.borrower` password                       |
 | `KEYCLOAK_AUDIT_VIEWER_PASSWORD`    | `audit.viewer` password                          |
+| `KEYCLOAK_ADMIN_URL`                | Host-side Keycloak Admin API base URL            |
+| `KEYCLOAK_REALM`                    | Managed Keycloak realm                           |
+| `KEYCLOAK_USER_SYNC_CLIENT_ID`      | Confidential user-management service client      |
+| `KEYCLOAK_USER_SYNC_CLIENT_SECRET`  | Ignored service-account client secret             |
+| `KEYCLOAK_APPLICATION_CLIENT_ID`    | Client containing the three application roles    |
+| `KEYCLOAK_ADMIN_TIMEOUT`            | Timeout for one administration operation         |
 
 The committed realm JSON is canonical development configuration. It is imported
-only when the `equipment` realm is absent; an ordinary restart does not reconcile
-later JSON changes into an existing realm.
+only when the `equipment` realm is absent; an ordinary restart does not import
+later JSON changes into an existing realm. The repeatable bootstrap does reapply
+the ignored service-account secret, its limited roles, the theme, and the three
+representative passwords. Reset a disposable Keycloak volume after canonical
+realm changes.
 
 </details>
 
@@ -211,6 +222,7 @@ make build
 make migrate-status
 make sqlc
 make inspect-token
+make reconcile-users
 ```
 
 ### Direct Docker Compose commands
@@ -345,6 +357,7 @@ Expected response shape:
     "username": "equipment.admin",
     "email": "admin@example.test",
     "display_name": "Equipment Administrator",
+    "role": "inventory_admin",
     "is_active": true,
     "created_at": "2026-07-29T00:00:00Z",
     "updated_at": "2026-07-29T00:00:00Z"
@@ -398,11 +411,18 @@ access token. The API verifies the RS256 signature, issuer, audience, subject,
 lifetime, and `equipment-api` client-role shape using cached JWKS data.
 
 After verification, the API resolves the exact token `(issuer, subject)` to an
-active local `users.id`. A previously unseen identity with a recognized
-application role can be safely JIT-provisioned from trusted claims. Existing
-local rows are never automatically linked by matching username or email, and
-the local database remains authoritative for profile data, activation,
-ownership, checkout history, and audit attribution.
+active, already-linked local `users.id`. Unknown Keycloak identities receive
+`403 identity_not_linked`; authentication never creates a local row. Tokens
+must contain exactly one recognized `equipment-api` role.
+
+The application API is the supported administrative entry point. It uses a
+bounded GoCloak adapter to synchronously mirror user creation, profile, role,
+and activation changes to Keycloak and PostgreSQL. PostgreSQL stores the
+intended single role in `users.role`; authorization still comes from the
+verified token role. Keycloak and the application keep separate databases, and
+the application never connects to Keycloak's PostgreSQL database.
+GoCloak is used only for administration; access-token verification remains on
+the existing `coreos/go-oidc` boundary.
 
 | Keycloak client role | Application access                                                                  |
 | -------------------- | ----------------------------------------------------------------------------------- |
@@ -418,12 +438,39 @@ The canonical development users are:
 | `sample.borrower` | `employee`        | `KEYCLOAK_SAMPLE_BORROWER_PASSWORD` |
 | `audit.viewer`    | `auditor`         | `KEYCLOAK_AUDIT_VIEWER_PASSWORD`    |
 
+Managed user routes, all requiring `users.manage`, are:
+
+| Method | Path | Effect |
+| --- | --- | --- |
+| `POST` | `/api/v1/users` | Create Keycloak identity, client role, and linked local row |
+| `PUT` | `/api/v1/users/:id` | Replace synchronized profile fields |
+| `PATCH` | `/api/v1/users/:id/role` | Replace the one application client role |
+| `PATCH` | `/api/v1/users/:id/status` | Synchronize activation state |
+| `DELETE` | `/api/v1/users/:id` | Disable both sides while retaining the local row and history |
+| `PUT` | `/api/v1/users/:id/temporary-password` | Send a temporary password directly to Keycloak |
+
+Role changes appear in newly issued tokens; an already issued token can retain
+its previous role until the five-minute access-token lifetime ends. Deactivation
+is checked locally on every request and immediately denies an already issued
+token. Temporary passwords are never stored, returned, trimmed, or logged.
+
+`make reconcile-users` is a one-shot migration and recovery tool. It pushes
+linked local state, provisions unlinked local users such as `maintenance.tech`,
+and reports Keycloak-only orphans for manual review. It never auto-links by
+username or email and never deletes orphans.
+
 The development Admin Console is available at
 `http://localhost:8081/admin`. Sign in to the `master` realm with
 `KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME` and
 `KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD`, then switch to the `equipment` realm. The
 bootstrap administrator is for realm administration and must not be used as an
 application actor.
+
+The API authenticates to the Admin API through the confidential
+`equipment-user-sync` service account. Bootstrap grants only the realm-management
+roles needed to manage users and view clients; it does not grant `realm-admin`.
+Direct Admin Console edits to application-managed profiles, activation, or
+`equipment-api` roles are unsupported and may be overwritten by reconciliation.
 
 The `equipment` realm uses the custom login theme in
 `keycloak/themes/equipment`. It inherits Keycloak's maintained login templates

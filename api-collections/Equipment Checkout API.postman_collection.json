@@ -324,7 +324,7 @@
     },
     {
       "name": "Users and Authentication",
-      "description": "Manages local application users and exercises bearer authentication plus safe JIT provisioning. User management requires users.manage. Local POST/PUT operations never manage Keycloak credentials or auto-link by username/email. A previously unseen valid Keycloak identity may create one linked local profile; collisions fail with identity_conflict.",
+      "description": "Manages users synchronously in Keycloak and PostgreSQL. User management requires users.manage. Create requests assign exactly one equipment-api client role; profile, role, and activation changes are mirrored. Unknown Keycloak identities are rejected with identity_not_linked.",
       "item": [
         {
           "name": "Create User",
@@ -336,7 +336,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"postman.operator\",\n  \"email\": \"postman.operator@example.test\",\n  \"display_name\": \"Postman Operator\"\n}",
+              "raw": "{\n  \"username\": \"postman.operator\",\n  \"email\": \"postman.operator@example.test\",\n  \"display_name\": \"Postman Operator\",\n  \"role\": \"employee\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -344,7 +344,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users"]
             },
-            "description": "Creates an active user. username and display_name are required; email is optional. Usernames and present emails are unique without regard to case."
+            "description": "Creates one active linked user in Keycloak and PostgreSQL with exactly one approved equipment-api role."
           },
           "response": []
         },
@@ -409,7 +409,29 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users", "{{userId}}"]
             },
-            "description": "Fully replaces profile fields while preserving is_active. username and display_name are required; null clears the optional email."
+            "description": "Synchronizes replacement profile fields while preserving role and is_active. null clears the optional email."
+          },
+          "response": []
+        },
+        {
+          "name": "Set User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"auditor\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}", "role"]
+            },
+            "description": "Replaces only the equipment-api client role and the local role column. Obtain a new access token to observe changed capabilities."
           },
           "response": []
         },
@@ -431,7 +453,43 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users", "{{userId}}", "status"]
             },
-            "description": "Activates or deactivates the selected user without changing profile fields."
+            "description": "Synchronizes Keycloak enabled state and the local is_active flag without changing profile fields or role."
+          },
+          "response": []
+        },
+        {
+          "name": "Set Temporary Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{temporaryPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/temporary-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}", "temporary-password"]
+            },
+            "description": "Sets a Keycloak-only temporary credential and returns 204. Enter temporaryPassword locally and never export it."
+          },
+          "response": []
+        },
+        {
+          "name": "Soft-Deprovision User",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Accept", "value": "application/json", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "Disables the Keycloak identity and local user with 204 while preserving checkout, history, and audit references."
           },
           "response": []
         },
@@ -447,7 +505,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "me"]
             },
-            "description": "Verifies the Keycloak access token and resolves its exact issuer/subject. A previously unseen identity with a recognized role and valid preferred_username is provisioned once; later requests reuse the local profile without synchronizing token claims."
+            "description": "Verifies the Keycloak access token and resolves its exact pre-linked issuer/subject. Unknown identities are rejected and cannot create local rows."
           },
           "response": []
         }
@@ -872,6 +930,11 @@
     {
       "key": "checkoutOffset",
       "value": "0",
+      "type": "string"
+    },
+    {
+      "key": "temporaryPassword",
+      "value": "",
       "type": "string"
     }
   ]

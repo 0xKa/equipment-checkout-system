@@ -34,9 +34,8 @@ WHERE NOT EXISTS (
 );
 
 -- Link only the exact intended development profiles to canonical Keycloak
--- identities. A username-only match is intentionally insufficient: a JIT row
--- is already linked by issuer/subject, while an unrelated local collision must
--- remain unlinked for explicit review.
+-- identities. A username-only match is intentionally insufficient; any other
+-- local row remains unlinked for explicit reconciliation or conflict review.
 UPDATE users
 SET
     identity_issuer = development_identities.identity_issuer,
