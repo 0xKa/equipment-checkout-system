@@ -25,6 +25,7 @@ var (
 	ErrUserIdentityUnlinked     = errors.New("local user has no managed Keycloak identity")
 	ErrIdentityAdminConflict    = errors.New("identity conflicts with an existing Keycloak user")
 	ErrIdentityAdminNotFound    = errors.New("linked Keycloak identity was not found")
+	ErrIdentityAdminRejected    = errors.New("Keycloak rejected the managed user data")
 	ErrIdentityAdminUnavailable = errors.New("Keycloak user administration is unavailable")
 	ErrAuthenticationRequired   = errors.New("authentication is required")
 	ErrInvalidToken             = errors.New("invalid access token")
@@ -62,6 +63,7 @@ const (
 	ErrorCodeUserIdentityUnlinked   = "keycloak_identity_unlinked"
 	ErrorCodeIdentityAdminConflict  = "keycloak_conflict"
 	ErrorCodeIdentityAdminNotFound  = "keycloak_identity_not_found"
+	ErrorCodeIdentityAdminRejected  = "keycloak_rejected"
 	ErrorCodeAuthenticationRequired = "authentication_required"
 	ErrorCodeInvalidToken           = "invalid_token"
 	ErrorCodeForbidden              = "forbidden"

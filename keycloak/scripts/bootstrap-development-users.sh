@@ -16,9 +16,10 @@ readonly USER_SYNC_CLIENT_ID="equipment-user-sync"
 readonly LOGIN_THEME="equipment"
 readonly KCADM="/opt/keycloak/bin/kcadm.sh"
 readonly KCADM_CONFIG="/tmp/kcadm.config"
+readonly USER_PROFILE_CONFIG="/tmp/equipment-user-profile.json"
 
 cleanup() {
-  rm -f "${KCADM_CONFIG}"
+  rm -f "${KCADM_CONFIG}" "${USER_PROFILE_CONFIG}"
 }
 trap cleanup EXIT
 
@@ -45,6 +46,91 @@ KC_CLI_PASSWORD="${KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD}" \
   --server "${KEYCLOAK_SERVER}" \
   --realm master \
   --user "${KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME}" >/dev/null
+
+cat >"${USER_PROFILE_CONFIG}" <<'JSON'
+{
+  "unmanagedAttributePolicy": "DISABLED",
+  "attributes": [
+    {
+      "name": "username",
+      "displayName": "${username}",
+      "validations": {
+        "length": {"min": 3, "max": 255},
+        "username-prohibited-characters": {},
+        "up-username-not-idn-homograph": {}
+      },
+      "permissions": {
+        "view": ["admin", "user"],
+        "edit": ["admin", "user"]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "email",
+      "displayName": "${email}",
+      "validations": {
+        "email": {},
+        "length": {"max": 255}
+      },
+      "permissions": {
+        "view": ["admin", "user"],
+        "edit": ["admin", "user"]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "firstName",
+      "displayName": "${firstName}",
+      "validations": {
+        "length": {"max": 255},
+        "person-name-prohibited-characters": {}
+      },
+      "permissions": {
+        "view": ["admin", "user"],
+        "edit": ["admin", "user"]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "lastName",
+      "displayName": "${lastName}",
+      "validations": {
+        "length": {"max": 255},
+        "person-name-prohibited-characters": {}
+      },
+      "permissions": {
+        "view": ["admin", "user"],
+        "edit": ["admin", "user"]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "equipment_display_name",
+      "displayName": "Equipment display name",
+      "validations": {
+        "length": {"min": 1, "max": 255}
+      },
+      "permissions": {
+        "view": ["admin"],
+        "edit": ["admin"]
+      },
+      "multivalued": false
+    }
+  ],
+  "groups": [
+    {
+      "name": "user-metadata",
+      "displayHeader": "User metadata",
+      "displayDescription": "Attributes which describe the user"
+    }
+  ]
+}
+JSON
+
+"${KCADM}" update users/profile \
+  --config "${KCADM_CONFIG}" \
+  --target-realm "${TARGET_REALM}" \
+  --file "${USER_PROFILE_CONFIG}" >/dev/null
 
 "${KCADM}" update "realms/${TARGET_REALM}" \
   --config "${KCADM_CONFIG}" \

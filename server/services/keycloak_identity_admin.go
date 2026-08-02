@@ -75,7 +75,7 @@ func (a *keycloakIdentityAdmin) UpdateProfile(
 		err := a.client.UpdateUser(callCtx, token, a.cfg.Realm, gocloak.User{
 			ID:       stringPointer(subject),
 			Username: stringPointer(profile.Username),
-			Email:    profile.Email,
+			Email:    updateEmailPointer(profile.Email),
 			Attributes: map[string][]string{
 				displayNameAttribute: {profile.DisplayName},
 			},
@@ -284,6 +284,8 @@ func mapIdentityAdminError(err error) error {
 			return fmt.Errorf("%w: %v", types.ErrIdentityAdminConflict, err)
 		case http.StatusNotFound:
 			return fmt.Errorf("%w: %v", types.ErrIdentityAdminNotFound, err)
+		case http.StatusBadRequest:
+			return fmt.Errorf("%w: %v", types.ErrIdentityAdminRejected, err)
 		}
 	}
 
@@ -293,3 +295,10 @@ func mapIdentityAdminError(err error) error {
 func stringPointer(value string) *string { return &value }
 func boolPointer(value bool) *bool       { return &value }
 func intPointer(value int) *int          { return &value }
+
+func updateEmailPointer(email *string) *string {
+	if email != nil {
+		return email
+	}
+	return stringPointer("")
+}

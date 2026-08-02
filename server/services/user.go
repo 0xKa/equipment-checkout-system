@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/mail"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/0xKa/equipment-checkout-system/server/db/sqlcgen"
 	"github.com/0xKa/equipment-checkout-system/server/types"
@@ -18,6 +19,7 @@ const (
 	constraintUsersUsername = "uq_users_username_normalized"
 	constraintUsersEmail    = "uq_users_email_normalized"
 	constraintUsersRole     = "ck_users_role"
+	maxIdentityFieldLength  = 255
 )
 
 type UserTransactionRunner interface {
@@ -446,7 +448,8 @@ func normalizeUserProfile(
 	displayNameValue string,
 ) (types.IdentityProfile, error) {
 	username = strings.TrimSpace(username)
-	if username == "" {
+	usernameLength := utf8.RuneCountInString(username)
+	if usernameLength < 3 || usernameLength > maxIdentityFieldLength {
 		return types.IdentityProfile{}, types.ErrInvalidUserInput
 	}
 
@@ -456,6 +459,9 @@ func normalizeUserProfile(
 	}
 	if email != nil {
 		normalizedEmail := strings.ToLower(*email)
+		if utf8.RuneCountInString(normalizedEmail) > maxIdentityFieldLength {
+			return types.IdentityProfile{}, types.ErrInvalidUserInput
+		}
 		address, parseErr := mail.ParseAddress(normalizedEmail)
 		if parseErr != nil || address.Address != normalizedEmail {
 			return types.IdentityProfile{}, types.ErrInvalidUserInput
@@ -464,7 +470,7 @@ func normalizeUserProfile(
 	}
 
 	displayName := strings.TrimSpace(displayNameValue)
-	if displayName == "" {
+	if displayName == "" || utf8.RuneCountInString(displayName) > maxIdentityFieldLength {
 		return types.IdentityProfile{}, types.ErrInvalidUserInput
 	}
 

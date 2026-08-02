@@ -190,6 +190,8 @@ func reconciliationFailureReason(err error) string {
 		return "keycloak_identity_not_found"
 	case errors.Is(err, types.ErrIdentityAdminUnavailable):
 		return "keycloak_unavailable"
+	case errors.Is(err, types.ErrIdentityAdminRejected):
+		return "keycloak_rejected"
 	case errors.Is(err, types.ErrUserIdentityUnlinked):
 		return "unsupported_identity_link"
 	default:

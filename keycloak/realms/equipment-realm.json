@@ -122,9 +122,9 @@
         "oidc.ciba.grant.enabled": "false",
         "standard.token.exchange.enabled": "false"
       },
-      "fullScopeAllowed": false,
+      "fullScopeAllowed": true,
       "protocolMappers": [],
-      "defaultClientScopes": [],
+      "defaultClientScopes": ["roles"],
       "optionalClientScopes": []
     }
   ],

@@ -131,7 +131,7 @@ func serviceError(err error) (int, string, string, bool) {
 	case errors.Is(err, types.ErrInvalidUserID):
 		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "user id must be a positive integer", true
 	case errors.Is(err, types.ErrInvalidUserInput):
-		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "username and display_name are required; email must be valid when provided", true
+		return http.StatusBadRequest, types.ErrorCodeInvalidRequest, "username must be 3 to 255 characters, display_name must be 1 to 255 characters, and email must be valid when provided", true
 	case errors.Is(err, types.ErrUserNotFound):
 		return http.StatusNotFound, types.ErrorCodeUserNotFound, "user not found", true
 	case errors.Is(err, types.ErrUsernameConflict):
@@ -156,6 +156,8 @@ func serviceError(err error) (int, string, string, bool) {
 		return http.StatusConflict, types.ErrorCodeIdentityAdminConflict, "username or email conflicts with an existing Keycloak user", true
 	case errors.Is(err, types.ErrIdentityAdminNotFound):
 		return http.StatusConflict, types.ErrorCodeIdentityAdminNotFound, "linked Keycloak identity was not found", true
+	case errors.Is(err, types.ErrIdentityAdminRejected):
+		return http.StatusBadRequest, types.ErrorCodeIdentityAdminRejected, "Keycloak rejected the managed user data", true
 	case errors.Is(err, types.ErrIdentityAdminUnavailable):
 		return http.StatusServiceUnavailable, types.ErrorCodeServiceUnavailable, "Keycloak user administration is unavailable", true
 	case errors.Is(err, types.ErrAccountInactive):
