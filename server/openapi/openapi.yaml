@@ -423,7 +423,7 @@ paths:
       tags: [Users]
       operationId: createUser
       summary: Create a managed user
-      description: Requires `users.manage`. Creates an active Keycloak identity with one client role and a linked local user.
+      description: Requires `users.manage`. Creates an active Keycloak identity with one application realm role and a linked local user.
       requestBody:
         required: true
         content:
@@ -535,7 +535,7 @@ paths:
       tags: [Users]
       operationId: updateUserRole
       summary: Replace a managed user's application role
-      description: Requires `users.manage`. Replaces only `equipment-api` client roles and updates the local role column.
+      description: Requires `users.manage`. Replaces only the three managed application realm roles and updates the local role column.
       requestBody:
         required: true
         content:

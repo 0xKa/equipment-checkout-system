@@ -168,7 +168,6 @@ public localhost issuer configured in `OIDC_ISSUER_URL`.
 | `KEYCLOAK_REALM`                    | Managed Keycloak realm                           |
 | `KEYCLOAK_USER_SYNC_CLIENT_ID`      | Confidential user-management service client      |
 | `KEYCLOAK_USER_SYNC_CLIENT_SECRET`  | Ignored service-account client secret             |
-| `KEYCLOAK_APPLICATION_CLIENT_ID`    | Client containing the three application roles    |
 | `KEYCLOAK_ADMIN_TIMEOUT`            | Timeout for one administration operation         |
 
 The committed realm JSON is canonical development configuration. It is imported
@@ -408,12 +407,12 @@ administrators can read inventory; only inventory administrators can mutate it.
 Keycloak `26.7.0` runs with a dedicated PostgreSQL database and supplies signed
 access tokens to the API. Every `/api/v1` route requires exactly one Bearer
 access token. The API verifies the RS256 signature, issuer, audience, subject,
-lifetime, and `equipment-api` client-role shape using cached JWKS data.
+lifetime, and realm-role claim shape using cached JWKS data.
 
 After verification, the API resolves the exact token `(issuer, subject)` to an
 active, already-linked local `users.id`. Unknown Keycloak identities receive
 `403 identity_not_linked`; authentication never creates a local row. Tokens
-must contain exactly one recognized `equipment-api` role.
+must contain exactly one recognized application realm role.
 
 The application API is the supported administrative entry point. It uses a
 bounded GoCloak adapter to synchronously mirror user creation, profile, role,
@@ -424,11 +423,11 @@ the application never connects to Keycloak's PostgreSQL database.
 GoCloak is used only for administration; access-token verification remains on
 the existing `coreos/go-oidc` boundary.
 
-| Keycloak client role | Application access                                                                  |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| `employee`           | `/me`, inventory reads, self checkout/return, and own checkout reads                |
-| `auditor`            | `/me`, inventory reads, all checkout reads, and item-wide history                   |
-| `inventory_admin`    | All current routes, including inventory and user management and on-behalf workflows |
+| Keycloak realm role | Application access                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `employee`          | `/me`, inventory reads, self checkout/return, and own checkout reads                |
+| `auditor`           | `/me`, inventory reads, all checkout reads, and item-wide history                   |
+| `inventory_admin`   | All current routes, including inventory and user management and on-behalf workflows |
 
 The canonical development users are:
 
@@ -442,9 +441,9 @@ Managed user routes, all requiring `users.manage`, are:
 
 | Method | Path | Effect |
 | --- | --- | --- |
-| `POST` | `/api/v1/users` | Create Keycloak identity, client role, and linked local row |
+| `POST` | `/api/v1/users` | Create Keycloak identity, realm role, and linked local row |
 | `PUT` | `/api/v1/users/:id` | Replace synchronized profile fields |
-| `PATCH` | `/api/v1/users/:id/role` | Replace the one application client role |
+| `PATCH` | `/api/v1/users/:id/role` | Replace the one application realm role |
 | `PATCH` | `/api/v1/users/:id/status` | Synchronize activation state |
 | `DELETE` | `/api/v1/users/:id` | Disable both sides while retaining the local row and history |
 | `PUT` | `/api/v1/users/:id/temporary-password` | Send a temporary password directly to Keycloak |
@@ -468,9 +467,9 @@ application actor.
 
 The API authenticates to the Admin API through the confidential
 `equipment-user-sync` service account. Bootstrap grants only the realm-management
-roles needed to manage users and view clients; it does not grant `realm-admin`.
+roles needed to manage users and read realm-role definitions; it does not grant `realm-admin`.
 Direct Admin Console edits to application-managed profiles, activation, or
-`equipment-api` roles are unsupported and may be overwritten by reconciliation.
+application realm roles are unsupported and may be overwritten by reconciliation.
 
 The `equipment` realm uses the custom login theme in
 `keycloak/themes/equipment`. It inherits Keycloak's maintained login templates

@@ -324,7 +324,7 @@
     },
     {
       "name": "Users and Authentication",
-      "description": "Manages users synchronously in Keycloak and PostgreSQL. User management requires users.manage. Create requests assign exactly one equipment-api client role; profile, role, and activation changes are mirrored. Unknown Keycloak identities are rejected with identity_not_linked.",
+      "description": "Manages users synchronously in Keycloak and PostgreSQL. User management requires users.manage. Create requests assign exactly one application realm role; profile, role, and activation changes are mirrored. Unknown Keycloak identities are rejected with identity_not_linked.",
       "item": [
         {
           "name": "Create User",
@@ -344,7 +344,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users"]
             },
-            "description": "Creates one active linked user in Keycloak and PostgreSQL with exactly one approved equipment-api role."
+            "description": "Creates one active linked user in Keycloak and PostgreSQL with exactly one approved application realm role."
           },
           "response": []
         },
@@ -431,7 +431,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users", "{{userId}}", "role"]
             },
-            "description": "Replaces only the equipment-api client role and the local role column. Obtain a new access token to observe changed capabilities."
+            "description": "Replaces only the managed application realm role and the local role column. Obtain a new access token to observe changed capabilities."
           },
           "response": []
         },

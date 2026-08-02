@@ -39,10 +39,10 @@ the runtime. Authentication now performs exact linked identity lookup only.
 - GoCloak is confined to one adapter behind project-owned domain types.
 - Every admin operation obtains a fresh bounded client-credentials token.
 - The `equipment-user-sync` service account has `manage-users` and
-  `view-clients`; it is not assigned `realm-admin`.
+  `view-realm`; it is not assigned `realm-admin`.
 - Bootstrap installs a managed, admin-only `equipment_display_name` user-profile
   attribute, so the application never invents first or last names.
-- User creation assigns exactly one approved `equipment-api` client role and
+- User creation assigns exactly one approved application realm role and
   compensates failed role or local-row creation by deleting the new identity.
 - Profile, role, and activation changes lock the local row, update Keycloak,
   update PostgreSQL, and attempt to restore Keycloak if the local operation
@@ -51,7 +51,7 @@ the runtime. Authentication now performs exact linked identity lookup only.
   history, status history, and audit references.
 - Temporary passwords are passed directly to Keycloak as temporary credentials;
   they are not stored, returned, trimmed, or intentionally logged.
-- Authentication requires exactly one recognized `equipment-api` role and an
+- Authentication requires exactly one recognized application realm role and an
   exact active local `(issuer, subject)` link. Unknown identities receive
   `403 identity_not_linked` and cannot create local rows.
 - The one-shot reconciler pushes local intended state, provisions unlinked local
@@ -69,7 +69,7 @@ database.
 - Reset a disposable Keycloak realm and verify the service-account secret and
   limited realm-management roles.
 - Create a user and confirm one linked local row, the exact Keycloak username,
-  email, `equipment_display_name`, enabled state, and one client role.
+  email, `equipment_display_name`, enabled state, and one realm role.
 - Exercise local and Keycloak username/email conflicts and confirm no duplicate
   or partially created managed user remains.
 - Force a failure after Keycloak creation and confirm compensating deletion.
