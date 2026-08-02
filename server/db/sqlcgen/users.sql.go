@@ -276,98 +276,16 @@ func (q *Queries) ListUsers(ctx context.Context, isActive *bool) ([]User, error)
 	return items, nil
 }
 
-const setUserActive = `-- name: SetUserActive :one
-UPDATE users
-SET
-    is_active = $1,
-    updated_at = GREATEST(statement_timestamp(), updated_at + INTERVAL '1 microsecond')
-WHERE id = $2
-RETURNING
-    id,
-    username,
-    email,
-    display_name,
-    is_active,
-    created_at,
-    updated_at,
-    identity_issuer,
-    external_subject,
-    role
-`
-
-type SetUserActiveParams struct {
-	IsActive bool
-	ID       int64
-}
-
-func (q *Queries) SetUserActive(ctx context.Context, arg SetUserActiveParams) (User, error) {
-	row := q.db.QueryRow(ctx, setUserActive, arg.IsActive, arg.ID)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.DisplayName,
-		&i.IsActive,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.IdentityIssuer,
-		&i.ExternalSubject,
-		&i.Role,
-	)
-	return i, err
-}
-
-const setUserRole = `-- name: SetUserRole :one
-UPDATE users
-SET
-    role = $1,
-    updated_at = GREATEST(statement_timestamp(), updated_at + INTERVAL '1 microsecond')
-WHERE id = $2
-RETURNING
-    id,
-    username,
-    email,
-    display_name,
-    is_active,
-    created_at,
-    updated_at,
-    identity_issuer,
-    external_subject,
-    role
-`
-
-type SetUserRoleParams struct {
-	Role string
-	ID   int64
-}
-
-func (q *Queries) SetUserRole(ctx context.Context, arg SetUserRoleParams) (User, error) {
-	row := q.db.QueryRow(ctx, setUserRole, arg.Role, arg.ID)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.DisplayName,
-		&i.IsActive,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.IdentityIssuer,
-		&i.ExternalSubject,
-		&i.Role,
-	)
-	return i, err
-}
-
-const updateUser = `-- name: UpdateUser :one
+const updateManagedUser = `-- name: UpdateManagedUser :one
 UPDATE users
 SET
     username = $1,
     email = $2,
     display_name = $3,
+    role = $4,
+    is_active = $5,
     updated_at = GREATEST(statement_timestamp(), updated_at + INTERVAL '1 microsecond')
-WHERE id = $4
+WHERE id = $6
 RETURNING
     id,
     username,
@@ -381,18 +299,22 @@ RETURNING
     role
 `
 
-type UpdateUserParams struct {
+type UpdateManagedUserParams struct {
 	Username    string
 	Email       *string
 	DisplayName string
+	Role        string
+	IsActive    bool
 	ID          int64
 }
 
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser,
+func (q *Queries) UpdateManagedUser(ctx context.Context, arg UpdateManagedUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateManagedUser,
 		arg.Username,
 		arg.Email,
 		arg.DisplayName,
+		arg.Role,
+		arg.IsActive,
 		arg.ID,
 	)
 	var i User

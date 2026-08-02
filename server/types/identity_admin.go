@@ -7,6 +7,14 @@ type IdentityProfile struct {
 	DisplayName string
 }
 
+// IdentityState is the complete application-owned user state mirrored to the
+// identity provider.
+type IdentityState struct {
+	Profile  IdentityProfile
+	Role     UserRole
+	IsActive bool
+}
+
 // ManagedIdentity is the safe subset needed for reconciliation reporting.
 type ManagedIdentity struct {
 	Subject  string

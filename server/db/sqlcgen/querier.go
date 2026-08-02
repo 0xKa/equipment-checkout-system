@@ -45,11 +45,9 @@ type Querier interface {
 	RecordItemStatusHistory(ctx context.Context, arg RecordItemStatusHistoryParams) error
 	ReturnCheckout(ctx context.Context, arg ReturnCheckoutParams) (Checkout, error)
 	SetItemWorkflowStatus(ctx context.Context, arg SetItemWorkflowStatusParams) (int64, error)
-	SetUserActive(ctx context.Context, arg SetUserActiveParams) (User, error)
-	SetUserRole(ctx context.Context, arg SetUserRoleParams) (User, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error)
-	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateManagedUser(ctx context.Context, arg UpdateManagedUserParams) (User, error)
 	UserEmailExists(ctx context.Context, arg UserEmailExistsParams) (bool, error)
 	UsernameExists(ctx context.Context, arg UsernameExistsParams) (bool, error)
 }

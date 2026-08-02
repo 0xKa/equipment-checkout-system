@@ -316,7 +316,7 @@ The collection is configured for Authorization Code with PKCE:
 | Client ID         | `equipment-postman`                                                    |
 | Client secret     | Empty                                                                  |
 | Callback URL      | `https://oauth.pstmn.io/v1/browser-callback`                           |
-| Scope             | `openid profile email`                                                 |
+| Scope             | `openid`                                                               |
 | PKCE method       | `S256`                                                                 |
 | Token placement   | `Authorization: Bearer <access-token>`                                 |
 
@@ -423,6 +423,14 @@ the application never connects to Keycloak's PostgreSQL database.
 GoCloak is used only for administration; access-token verification remains on
 the existing `coreos/go-oidc` boundary.
 
+`UserService` owns each synchronous two-store mutation. It locks and snapshots
+the local row, asks Keycloak to replace the complete managed profile, role, and
+activation state with one bounded service token, writes that same state to
+PostgreSQL, and returns success only after the database commit. If Keycloak may
+have changed but the replacement or local commit fails, the service makes one
+bounded attempt to restore the snapshot and leaves reconciliation as the
+explicit recovery path if restoration also fails.
+
 | Keycloak realm role | Application access                                                                  |
 | ------------------- | ----------------------------------------------------------------------------------- |
 | `employee`          | `/me`, inventory reads, self checkout/return, and own checkout reads                |
@@ -453,8 +461,9 @@ its previous role until the five-minute access-token lifetime ends. Deactivation
 is checked locally on every request and immediately denies an already issued
 token. Temporary passwords are never stored, returned, trimmed, or logged.
 
-`make reconcile-users` is a one-shot migration and recovery tool. It pushes
-linked local state, provisions unlinked local users such as `maintenance.tech`,
+`make reconcile-users` is a one-shot migration and recovery tool. It reuses the
+same complete-state Keycloak operation to push linked local state, provisions
+unlinked local users such as `maintenance.tech`,
 and reports Keycloak-only orphans for manual review. It never auto-links by
 username or email and never deletes orphans.
 

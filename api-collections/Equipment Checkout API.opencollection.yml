@@ -41,7 +41,7 @@ request:
     - name: oidcCallbackUrl
       value: "https://oauth.pstmn.io/v1/browser-callback"
     - name: oidcScope
-      value: "openid profile email"
+      value: "openid"
     - name: borrowerUserId
       value: "2"
     - name: checkoutId

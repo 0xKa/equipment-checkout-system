@@ -90,47 +90,13 @@ FROM users
 WHERE identity_issuer = sqlc.arg(identity_issuer)
   AND external_subject = sqlc.arg(external_subject);
 
--- name: UpdateUser :one
+-- name: UpdateManagedUser :one
 UPDATE users
 SET
     username = sqlc.arg(username),
     email = sqlc.narg(email),
     display_name = sqlc.arg(display_name),
-    updated_at = GREATEST(statement_timestamp(), updated_at + INTERVAL '1 microsecond')
-WHERE id = sqlc.arg(id)
-RETURNING
-    id,
-    username,
-    email,
-    display_name,
-    is_active,
-    created_at,
-    updated_at,
-    identity_issuer,
-    external_subject,
-    role;
-
--- name: SetUserRole :one
-UPDATE users
-SET
     role = sqlc.arg(role),
-    updated_at = GREATEST(statement_timestamp(), updated_at + INTERVAL '1 microsecond')
-WHERE id = sqlc.arg(id)
-RETURNING
-    id,
-    username,
-    email,
-    display_name,
-    is_active,
-    created_at,
-    updated_at,
-    identity_issuer,
-    external_subject,
-    role;
-
--- name: SetUserActive :one
-UPDATE users
-SET
     is_active = sqlc.arg(is_active),
     updated_at = GREATEST(statement_timestamp(), updated_at + INTERVAL '1 microsecond')
 WHERE id = sqlc.arg(id)

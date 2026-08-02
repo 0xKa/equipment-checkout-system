@@ -80,7 +80,7 @@ func (r *userReconciler) Reconcile(
 		}
 	}
 
-	identities, err := r.identities.ListIdentities(ctx)
+	identities, err := r.identities.List(ctx)
 	if err != nil {
 		return report, fmt.Errorf("list Keycloak users for reconciliation: %w", err)
 	}
@@ -120,16 +120,8 @@ func (r *userReconciler) reconcileUser(ctx context.Context, id int64) (string, e
 		}
 
 		action = "provisioned"
-		createdSubject, err = r.identities.CreateIdentity(ctx, userProfile(user))
+		createdSubject, err = r.identities.Create(ctx, identityState(user))
 		if err != nil {
-			return err
-		}
-		if err := r.identities.ReplaceRole(
-			ctx, createdSubject, types.UserRole(user.Role),
-		); err != nil {
-			return err
-		}
-		if err := r.identities.SetEnabled(ctx, createdSubject, user.IsActive); err != nil {
 			return err
 		}
 
@@ -148,7 +140,7 @@ func (r *userReconciler) reconcileUser(ctx context.Context, id int64) (string, e
 	}
 
 	if createdSubject != "" {
-		if err := r.identities.DeleteIdentity(context.Background(), createdSubject); err != nil {
+		if err := r.identities.Delete(context.Background(), createdSubject); err != nil {
 			return "", fmt.Errorf("provision compensation failed: %w", runErr)
 		}
 	}
@@ -156,14 +148,7 @@ func (r *userReconciler) reconcileUser(ctx context.Context, id int64) (string, e
 }
 
 func (r *userReconciler) pushUser(ctx context.Context, user sqlcgen.User) error {
-	subject := *user.ExternalSubject
-	if err := r.identities.UpdateProfile(ctx, subject, userProfile(user)); err != nil {
-		return err
-	}
-	if err := r.identities.ReplaceRole(ctx, subject, types.UserRole(user.Role)); err != nil {
-		return err
-	}
-	return r.identities.SetEnabled(ctx, subject, user.IsActive)
+	return r.identities.Replace(ctx, *user.ExternalSubject, identityState(user))
 }
 
 func (r *userReconciler) linkedSubjects(ctx context.Context) (map[string]struct{}, error) {

@@ -37,16 +37,19 @@ the runtime. Authentication now performs exact linked identity lookup only.
 - Keycloak and application PostgreSQL remain isolated; the application uses the
   Admin REST API and never writes Keycloak tables directly.
 - GoCloak is confined to one adapter behind project-owned domain types.
-- Every admin operation obtains a fresh bounded client-credentials token.
+- Every complete-state admin operation obtains one fresh bounded
+  client-credentials token and reuses it for its Keycloak calls.
 - The `equipment-user-sync` service account has `manage-users` and
   `view-realm`; it is not assigned `realm-admin`.
 - Bootstrap installs a managed, admin-only `equipment_display_name` user-profile
   attribute, so the application never invents first or last names.
-- User creation assigns exactly one approved application realm role and
-  compensates failed role or local-row creation by deleting the new identity.
-- Profile, role, and activation changes lock the local row, update Keycloak,
-  update PostgreSQL, and attempt to restore Keycloak if the local operation
-  fails.
+- User creation sends the complete profile, role, and activation state through
+  one provider operation and compensates partial provider or local-row failure
+  by deleting the new identity.
+- Profile, role, and activation changes share one service-owned workflow: lock
+  and snapshot the local row, replace complete Keycloak state, write the same
+  PostgreSQL state, commit, and attempt one snapshot restoration on any failure
+  after Keycloak may have changed.
 - Soft deprovisioning disables both sides and preserves the local row, checkout
   history, status history, and audit references.
 - Temporary passwords are passed directly to Keycloak as temporary credentials;
@@ -54,8 +57,9 @@ the runtime. Authentication now performs exact linked identity lookup only.
 - Authentication requires exactly one recognized application realm role and an
   exact active local `(issuer, subject)` link. Unknown identities receive
   `403 identity_not_linked` and cannot create local rows.
-- The one-shot reconciler pushes local intended state, provisions unlinked local
-  rows, refuses conflict auto-linking, and reports rather than deletes orphans.
+- The one-shot reconciler reuses the complete-state provider operation, pushes
+  local intended state, provisions unlinked local rows, refuses conflict
+  auto-linking, and reports rather than deletes orphans.
 - Public errors map invalid roles, unlinked identities, provider conflicts,
   missing linked identities, and provider unavailability without exposing
   GoCloak responses or credentials.

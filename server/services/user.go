@@ -86,21 +86,28 @@ func (s *userService) Create(
 		return types.User{}, err
 	}
 
-	subject, err := s.identities.CreateIdentity(ctx, profile)
-	if err != nil {
-		return types.User{}, err
+	state := types.IdentityState{
+		Profile:  profile,
+		Role:     input.Role,
+		IsActive: true,
 	}
-
-	if err := s.identities.ReplaceRole(ctx, subject, input.Role); err != nil {
-		s.deleteCreatedIdentity(subject)
+	// Creation writes the complete Keycloak identity first, then inserts the
+	// linked local row. The local insert is one atomic statement, so it does not
+	// need an explicit PostgreSQL transaction. If it fails, the service deletes
+	// the newly created Keycloak identity before returning failure.
+	subject, err := s.identities.Create(ctx, state)
+	if err != nil {
+		if subject != "" {
+			s.deleteCreatedIdentity(subject)
+		}
 		return types.User{}, err
 	}
 
 	row, err := s.queries.CreateUser(ctx, sqlcgen.CreateUserParams{
-		Username:        profile.Username,
-		Email:           profile.Email,
-		DisplayName:     profile.DisplayName,
-		Role:            string(input.Role),
+		Username:        state.Profile.Username,
+		Email:           state.Profile.Email,
+		DisplayName:     state.Profile.DisplayName,
+		Role:            string(state.Role),
 		IdentityIssuer:  &s.issuer,
 		ExternalSubject: &subject,
 	})
@@ -160,43 +167,9 @@ func (s *userService) UpdateProfile(
 		return types.User{}, err
 	}
 
-	var previous sqlcgen.User
-	var updated sqlcgen.User
-	identityChanged := false
-	runErr := s.transactions.Run(ctx, func(queries sqlcgen.Querier) error {
-		var err error
-		previous, err = lockedLinkedUser(ctx, queries, id, s.issuer)
-		if err != nil {
-			return err
-		}
-		if err := validateUniqueUserIdentity(ctx, queries, profile, id); err != nil {
-			return err
-		}
-
-		if err := s.identities.UpdateProfile(ctx, *previous.ExternalSubject, profile); err != nil {
-			return err
-		}
-		identityChanged = true
-
-		updated, err = queries.UpdateUser(ctx, sqlcgen.UpdateUserParams{
-			Username:    profile.Username,
-			Email:       profile.Email,
-			DisplayName: profile.DisplayName,
-			ID:          id,
-		})
-		if err != nil {
-			return mapUserWriteError(ctx, "update user profile", err)
-		}
-		return nil
+	return s.updateManagedUser(ctx, id, "update user profile", func(state *types.IdentityState) {
+		state.Profile = profile
 	})
-	if runErr != nil {
-		if identityChanged {
-			s.restoreProfile(previous)
-		}
-		return types.User{}, fmt.Errorf("update user profile: %w", runErr)
-	}
-
-	return userFromRow(updated), nil
 }
 
 func (s *userService) SetRole(
@@ -211,41 +184,9 @@ func (s *userService) SetRole(
 		return types.User{}, types.ErrInvalidUserRole
 	}
 
-	var previous sqlcgen.User
-	var updated sqlcgen.User
-	identityChanged := false
-	runErr := s.transactions.Run(ctx, func(queries sqlcgen.Querier) error {
-		var err error
-		previous, err = lockedLinkedUser(ctx, queries, id, s.issuer)
-		if err != nil {
-			return err
-		}
-
-		if err := s.identities.ReplaceRole(ctx, *previous.ExternalSubject, role); err != nil {
-			// Role replacement uses delete-then-add provider calls. Retrying the
-			// previous intended role covers a rare failure between those calls.
-			s.restoreRole(previous)
-			return err
-		}
-		identityChanged = true
-
-		updated, err = queries.SetUserRole(ctx, sqlcgen.SetUserRoleParams{
-			Role: string(role),
-			ID:   id,
-		})
-		if err != nil {
-			return mapUserWriteError(ctx, "set user role", err)
-		}
-		return nil
+	return s.updateManagedUser(ctx, id, "set user role", func(state *types.IdentityState) {
+		state.Role = role
 	})
-	if runErr != nil {
-		if identityChanged {
-			s.restoreRole(previous)
-		}
-		return types.User{}, fmt.Errorf("set user role: %w", runErr)
-	}
-
-	return userFromRow(updated), nil
 }
 
 func (s *userService) SetActive(
@@ -257,38 +198,9 @@ func (s *userService) SetActive(
 		return types.User{}, err
 	}
 
-	var previous sqlcgen.User
-	var updated sqlcgen.User
-	identityChanged := false
-	runErr := s.transactions.Run(ctx, func(queries sqlcgen.Querier) error {
-		var err error
-		previous, err = lockedLinkedUser(ctx, queries, id, s.issuer)
-		if err != nil {
-			return err
-		}
-
-		if err := s.identities.SetEnabled(ctx, *previous.ExternalSubject, isActive); err != nil {
-			return err
-		}
-		identityChanged = true
-
-		updated, err = queries.SetUserActive(ctx, sqlcgen.SetUserActiveParams{
-			IsActive: isActive,
-			ID:       id,
-		})
-		if err != nil {
-			return utils.UnexpectedDatabaseError(ctx, "set user active status", err)
-		}
-		return nil
+	return s.updateManagedUser(ctx, id, "set user active status", func(state *types.IdentityState) {
+		state.IsActive = isActive
 	})
-	if runErr != nil {
-		if identityChanged {
-			s.restoreEnabled(previous)
-		}
-		return types.User{}, fmt.Errorf("set user active status: %w", runErr)
-	}
-
-	return userFromRow(updated), nil
 }
 
 func (s *userService) Deprovision(ctx context.Context, id int64) error {
@@ -322,47 +234,91 @@ func (s *userService) SetTemporaryPassword(
 	return s.identities.SetTemporaryPassword(ctx, *row.ExternalSubject, password)
 }
 
+// updateManagedUser owns one logical user transaction across PostgreSQL and
+// Keycloak. Keycloak cannot join the PostgreSQL transaction, so the service:
+//
+//  1. locks and snapshots the local row;
+//  2. derives and validates the complete desired state;
+//  3. replaces the Keycloak state;
+//  4. writes the same state locally and commits PostgreSQL.
+//
+// TransactionManager.Run returns success only after the database commit. If
+// Keycloak may have changed but the replacement, local write, or commit fails,
+// the service makes one bounded attempt to restore the snapshot. A failed
+// restoration is logged for the explicit reconciliation workflow.
+func (s *userService) updateManagedUser(
+	ctx context.Context,
+	id int64,
+	operation string,
+	mutate func(*types.IdentityState),
+) (types.User, error) {
+	var previous sqlcgen.User
+	var updated sqlcgen.User
+	identityMayHaveChanged := false
+
+	runErr := s.transactions.Run(ctx, func(queries sqlcgen.Querier) error {
+		var err error
+		previous, err = lockedLinkedUser(ctx, queries, id, s.issuer)
+		if err != nil {
+			return err
+		}
+
+		desired := identityState(previous)
+		mutate(&desired)
+		if err := validateUniqueUserIdentity(ctx, queries, desired.Profile, id); err != nil {
+			return err
+		}
+
+		// Replace can make more than one Keycloak Admin API call. Mark the
+		// identity before calling it because an error can follow a partial
+		// provider update.
+		identityMayHaveChanged = true
+		if err := s.identities.Replace(ctx, *previous.ExternalSubject, desired); err != nil {
+			return err
+		}
+
+		updated, err = queries.UpdateManagedUser(ctx, sqlcgen.UpdateManagedUserParams{
+			Username:    desired.Profile.Username,
+			Email:       desired.Profile.Email,
+			DisplayName: desired.Profile.DisplayName,
+			Role:        string(desired.Role),
+			IsActive:    desired.IsActive,
+			ID:          id,
+		})
+		if err != nil {
+			return mapUserWriteError(ctx, operation, err)
+		}
+		return nil
+	})
+	if runErr == nil {
+		return userFromRow(updated), nil
+	}
+
+	if identityMayHaveChanged {
+		s.restoreIdentity(previous, operation)
+	}
+	return types.User{}, fmt.Errorf("%s: %w", operation, runErr)
+}
+
 func (s *userService) deleteCreatedIdentity(subject string) {
-	if err := s.identities.DeleteIdentity(context.Background(), subject); err != nil {
+	if err := s.identities.Delete(context.Background(), subject); err != nil {
 		s.log.Warn("user creation compensation failed; run reconcile-users")
 	}
 }
 
-func (s *userService) restoreProfile(previous sqlcgen.User) {
-	err := s.identities.UpdateProfile(context.Background(), *previous.ExternalSubject, userProfile(previous))
-	if err != nil {
-		s.logCompensationFailure(previous.ID, "profile")
-	}
-}
-
-func (s *userService) restoreRole(previous sqlcgen.User) {
-	err := s.identities.ReplaceRole(
+func (s *userService) restoreIdentity(previous sqlcgen.User, operation string) {
+	err := s.identities.Replace(
 		context.Background(),
 		*previous.ExternalSubject,
-		types.UserRole(previous.Role),
+		identityState(previous),
 	)
 	if err != nil {
-		s.logCompensationFailure(previous.ID, "role")
+		s.log.Warn(
+			"user synchronization compensation failed; run reconcile-users",
+			zap.Int64("user_id", previous.ID),
+			zap.String("operation", operation),
+		)
 	}
-}
-
-func (s *userService) restoreEnabled(previous sqlcgen.User) {
-	err := s.identities.SetEnabled(
-		context.Background(),
-		*previous.ExternalSubject,
-		previous.IsActive,
-	)
-	if err != nil {
-		s.logCompensationFailure(previous.ID, "activation")
-	}
-}
-
-func (s *userService) logCompensationFailure(userID int64, field string) {
-	s.log.Warn(
-		"user synchronization compensation failed; run reconcile-users",
-		zap.Int64("user_id", userID),
-		zap.String("field", field),
-	)
 }
 
 func lockedLinkedUser(
@@ -442,6 +398,14 @@ func userProfile(row sqlcgen.User) types.IdentityProfile {
 		Username:    row.Username,
 		Email:       row.Email,
 		DisplayName: row.DisplayName,
+	}
+}
+
+func identityState(row sqlcgen.User) types.IdentityState {
+	return types.IdentityState{
+		Profile:  userProfile(row),
+		Role:     types.UserRole(row.Role),
+		IsActive: row.IsActive,
 	}
 }
 

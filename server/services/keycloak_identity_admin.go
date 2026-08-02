@@ -38,19 +38,23 @@ func NewKeycloakIdentityAdmin(cfg KeycloakIdentityAdminConfig) IdentityAdmin {
 	return &keycloakIdentityAdmin{client: client, cfg: cfg}
 }
 
-func (a *keycloakIdentityAdmin) CreateIdentity(
+func (a *keycloakIdentityAdmin) Create(
 	ctx context.Context,
-	profile types.IdentityProfile,
+	state types.IdentityState,
 ) (string, error) {
+	if !state.Role.Valid() {
+		return "", types.ErrInvalidUserRole
+	}
+
 	var subject string
 	err := a.withToken(ctx, func(callCtx context.Context, token string) error {
 		created, err := a.client.CreateUser(callCtx, token, a.cfg.Realm, gocloak.User{
-			Username:      new(profile.Username),
-			Email:         profile.Email,
-			Enabled:       new(true),
+			Username:      new(state.Profile.Username),
+			Email:         state.Profile.Email,
+			Enabled:       new(state.IsActive),
 			EmailVerified: new(false),
 			Attributes: map[string][]string{
-				displayNameAttribute: {profile.DisplayName},
+				displayNameAttribute: {state.Profile.DisplayName},
 			},
 		})
 		if err != nil {
@@ -59,101 +63,83 @@ func (a *keycloakIdentityAdmin) CreateIdentity(
 		if strings.TrimSpace(created) == "" {
 			return types.ErrIdentityAdminUnavailable
 		}
+
 		subject = created
-		return nil
+		return a.replaceRole(callCtx, token, subject, state.Role)
 	})
 	return subject, err
 }
 
-func (a *keycloakIdentityAdmin) UpdateProfile(
+func (a *keycloakIdentityAdmin) Replace(
 	ctx context.Context,
 	subject string,
-	profile types.IdentityProfile,
+	state types.IdentityState,
 ) error {
-	return a.withToken(ctx, func(callCtx context.Context, token string) error {
-		err := a.client.UpdateUser(callCtx, token, a.cfg.Realm, gocloak.User{
-			ID:       new(subject),
-			Username: new(profile.Username),
-			Email:    updateEmailPointer(profile.Email),
-			Attributes: map[string][]string{
-				displayNameAttribute: {profile.DisplayName},
-			},
-		})
-		return mapIdentityAdminError(err)
-	})
-}
-
-func (a *keycloakIdentityAdmin) ReplaceRole(
-	ctx context.Context,
-	subject string,
-	role types.UserRole,
-) error {
-	if !role.Valid() {
+	if !state.Role.Valid() {
 		return types.ErrInvalidUserRole
 	}
 
 	return a.withToken(ctx, func(callCtx context.Context, token string) error {
-		current, err := a.client.GetRealmRolesByUserID(
-			callCtx, token, a.cfg.Realm, subject,
-		)
+		err := a.client.UpdateUser(callCtx, token, a.cfg.Realm, gocloak.User{
+			ID:       new(subject),
+			Username: new(state.Profile.Username),
+			Email:    updateEmailPointer(state.Profile.Email),
+			Enabled:  new(state.IsActive),
+			Attributes: map[string][]string{
+				displayNameAttribute: {state.Profile.DisplayName},
+			},
+		})
 		if err != nil {
 			return mapIdentityAdminError(err)
 		}
-
-		desired, err := a.client.GetRealmRole(
-			callCtx, token, a.cfg.Realm, string(role),
-		)
-		if err != nil {
-			return mapIdentityAdminError(err)
-		}
-		if desired == nil || desired.ID == nil || desired.Name == nil {
-			return types.ErrIdentityAdminUnavailable
-		}
-
-		managed := concreteManagedRoles(current)
-		if len(managed) == 1 && managed[0].Name != nil &&
-			*managed[0].Name == string(role) {
-			return nil
-		}
-
-		if len(managed) > 0 {
-			if err := a.client.DeleteRealmRoleFromUser(
-				callCtx, token, a.cfg.Realm, subject, managed,
-			); err != nil {
-				return mapIdentityAdminError(err)
-			}
-		}
-
-		if err := a.client.AddRealmRoleToUser(
-			callCtx,
-			token,
-			a.cfg.Realm,
-			subject,
-			[]gocloak.Role{*desired},
-		); err != nil {
-			if len(managed) > 0 {
-				_ = a.client.AddRealmRoleToUser(
-					callCtx, token, a.cfg.Realm, subject, managed,
-				)
-			}
-			return mapIdentityAdminError(err)
-		}
-		return nil
+		return a.replaceRole(callCtx, token, subject, state.Role)
 	})
 }
 
-func (a *keycloakIdentityAdmin) SetEnabled(
+func (a *keycloakIdentityAdmin) replaceRole(
 	ctx context.Context,
+	token string,
 	subject string,
-	enabled bool,
+	role types.UserRole,
 ) error {
-	return a.withToken(ctx, func(callCtx context.Context, token string) error {
-		err := a.client.UpdateUser(callCtx, token, a.cfg.Realm, gocloak.User{
-			ID:      new(subject),
-			Enabled: new(enabled),
-		})
+	current, err := a.client.GetRealmRolesByUserID(
+		ctx, token, a.cfg.Realm, subject,
+	)
+	if err != nil {
 		return mapIdentityAdminError(err)
-	})
+	}
+
+	desired, err := a.client.GetRealmRole(
+		ctx, token, a.cfg.Realm, string(role),
+	)
+	if err != nil {
+		return mapIdentityAdminError(err)
+	}
+	if desired == nil || desired.ID == nil || desired.Name == nil {
+		return types.ErrIdentityAdminUnavailable
+	}
+
+	managed := concreteManagedRoles(current)
+	if len(managed) == 1 && managed[0].Name != nil &&
+		*managed[0].Name == string(role) {
+		return nil
+	}
+
+	if len(managed) > 0 {
+		if err := a.client.DeleteRealmRoleFromUser(
+			ctx, token, a.cfg.Realm, subject, managed,
+		); err != nil {
+			return mapIdentityAdminError(err)
+		}
+	}
+
+	return mapIdentityAdminError(a.client.AddRealmRoleToUser(
+		ctx,
+		token,
+		a.cfg.Realm,
+		subject,
+		[]gocloak.Role{*desired},
+	))
 }
 
 func (a *keycloakIdentityAdmin) SetTemporaryPassword(
@@ -169,7 +155,7 @@ func (a *keycloakIdentityAdmin) SetTemporaryPassword(
 	})
 }
 
-func (a *keycloakIdentityAdmin) DeleteIdentity(ctx context.Context, subject string) error {
+func (a *keycloakIdentityAdmin) Delete(ctx context.Context, subject string) error {
 	return a.withToken(ctx, func(callCtx context.Context, token string) error {
 		return mapIdentityAdminError(
 			a.client.DeleteUser(callCtx, token, a.cfg.Realm, subject),
@@ -177,7 +163,7 @@ func (a *keycloakIdentityAdmin) DeleteIdentity(ctx context.Context, subject stri
 	})
 }
 
-func (a *keycloakIdentityAdmin) ListIdentities(
+func (a *keycloakIdentityAdmin) List(
 	ctx context.Context,
 ) ([]types.ManagedIdentity, error) {
 	identities := make([]types.ManagedIdentity, 0)

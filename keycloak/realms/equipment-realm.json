@@ -90,8 +90,6 @@
       "defaultClientScopes": [
         "basic",
         "roles",
-        "profile",
-        "email",
         "equipment-api-access"
       ],
       "optionalClientScopes": []

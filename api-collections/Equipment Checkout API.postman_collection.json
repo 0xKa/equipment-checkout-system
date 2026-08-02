@@ -909,7 +909,7 @@
     },
     {
       "key": "oidcScope",
-      "value": "openid profile email",
+      "value": "openid",
       "type": "string"
     },
     {
