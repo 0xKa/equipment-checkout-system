@@ -97,6 +97,35 @@
         "equipment-api-access"
       ],
       "optionalClientScopes": []
+    },
+    {
+      "clientId": "equipment-user-sync",
+      "name": "Equipment User Sync",
+      "description": "Confidential service account for application-owned user administration.",
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "standard.token.exchange.enabled": "false"
+      },
+      "fullScopeAllowed": false,
+      "protocolMappers": [],
+      "defaultClientScopes": [],
+      "optionalClientScopes": []
     }
   ],
   "clientScopes": [
@@ -489,6 +518,9 @@
       "email": "admin@example.test",
       "emailVerified": false,
       "enabled": true,
+      "attributes": {
+        "equipment_display_name": ["Equipment Administrator"]
+      },
       "requiredActions": [],
       "clientRoles": {
         "equipment-api": ["inventory_admin"]
@@ -502,6 +534,9 @@
       "email": "borrower@example.test",
       "emailVerified": false,
       "enabled": true,
+      "attributes": {
+        "equipment_display_name": ["Sample Borrower"]
+      },
       "requiredActions": [],
       "clientRoles": {
         "equipment-api": ["employee"]
@@ -515,6 +550,9 @@
       "email": "audit@example.test",
       "emailVerified": false,
       "enabled": true,
+      "attributes": {
+        "equipment_display_name": ["Audit Viewer"]
+      },
       "requiredActions": [],
       "clientRoles": {
         "equipment-api": ["auditor"]

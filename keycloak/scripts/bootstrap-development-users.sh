@@ -7,10 +7,12 @@ set -euo pipefail
 : "${KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD:?KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD is required}"
 : "${KEYCLOAK_SAMPLE_BORROWER_PASSWORD:?KEYCLOAK_SAMPLE_BORROWER_PASSWORD is required}"
 : "${KEYCLOAK_AUDIT_VIEWER_PASSWORD:?KEYCLOAK_AUDIT_VIEWER_PASSWORD is required}"
+: "${KEYCLOAK_USER_SYNC_CLIENT_SECRET:?KEYCLOAK_USER_SYNC_CLIENT_SECRET is required}"
 
 readonly KEYCLOAK_SERVER="http://keycloak:8080"
 readonly TARGET_REALM="equipment"
 readonly API_CLIENT_ID="equipment-api"
+readonly USER_SYNC_CLIENT_ID="equipment-user-sync"
 readonly LOGIN_THEME="equipment"
 readonly KCADM="/opt/keycloak/bin/kcadm.sh"
 readonly KCADM_CONFIG="/tmp/kcadm.config"
@@ -72,6 +74,47 @@ for role in employee inventory_admin auditor; do
   fi
 done
 
+user_sync_client_json="$(
+  "${KCADM}" get clients \
+    --config "${KCADM_CONFIG}" \
+    --target-realm "${TARGET_REALM}" \
+    --query "clientId=${USER_SYNC_CLIENT_ID}" \
+    --query "exact=true" \
+    --fields id
+)"
+user_sync_client_uuid="$(printf '%s' "${user_sync_client_json}" | sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+
+if [[ -z "${user_sync_client_uuid}" ]]; then
+  echo "Required Keycloak client ${USER_SYNC_CLIENT_ID} is missing from realm ${TARGET_REALM}." >&2
+  exit 1
+fi
+
+"${KCADM}" update "clients/${user_sync_client_uuid}" \
+  --config "${KCADM_CONFIG}" \
+  --target-realm "${TARGET_REALM}" \
+  --set "secret=${KEYCLOAK_USER_SYNC_CLIENT_SECRET}" >/dev/null
+
+service_account_json="$(
+  "${KCADM}" get "clients/${user_sync_client_uuid}/service-account-user" \
+    --config "${KCADM_CONFIG}" \
+    --target-realm "${TARGET_REALM}" \
+    --fields id
+)"
+service_account_uuid="$(printf '%s' "${service_account_json}" | sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+
+if [[ -z "${service_account_uuid}" ]]; then
+  echo "Service account for ${USER_SYNC_CLIENT_ID} is missing." >&2
+  exit 1
+fi
+
+"${KCADM}" add-roles \
+  --config "${KCADM_CONFIG}" \
+  --target-realm "${TARGET_REALM}" \
+  --uid "${service_account_uuid}" \
+  --cclientid realm-management \
+  --rolename manage-users \
+  --rolename view-clients >/dev/null
+
 set_development_password() {
   local username="$1"
   local password="$2"
@@ -104,4 +147,4 @@ set_development_password "equipment.admin" "${KEYCLOAK_EQUIPMENT_ADMIN_PASSWORD}
 set_development_password "sample.borrower" "${KEYCLOAK_SAMPLE_BORROWER_PASSWORD}"
 set_development_password "audit.viewer" "${KEYCLOAK_AUDIT_VIEWER_PASSWORD}"
 
-echo "Keycloak development theme and user passwords are configured."
+echo "Keycloak development service account, theme, and user passwords are configured."
