@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -185,12 +186,7 @@ func isCompactSignedJWT(rawToken string) bool {
 	if len(parts) != 3 {
 		return false
 	}
-	for _, part := range parts {
-		if part == "" {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(parts, "")
 }
 
 func checkJWKSAvailability(ctx context.Context, client *http.Client, jwksURL string) error {

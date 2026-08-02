@@ -45,10 +45,10 @@ func (a *keycloakIdentityAdmin) CreateIdentity(
 	var subject string
 	err := a.withToken(ctx, func(callCtx context.Context, token string) error {
 		created, err := a.client.CreateUser(callCtx, token, a.cfg.Realm, gocloak.User{
-			Username:      stringPointer(profile.Username),
+			Username:      new(profile.Username),
 			Email:         profile.Email,
-			Enabled:       boolPointer(true),
-			EmailVerified: boolPointer(false),
+			Enabled:       new(true),
+			EmailVerified: new(false),
 			Attributes: map[string][]string{
 				displayNameAttribute: {profile.DisplayName},
 			},
@@ -72,8 +72,8 @@ func (a *keycloakIdentityAdmin) UpdateProfile(
 ) error {
 	return a.withToken(ctx, func(callCtx context.Context, token string) error {
 		err := a.client.UpdateUser(callCtx, token, a.cfg.Realm, gocloak.User{
-			ID:       stringPointer(subject),
-			Username: stringPointer(profile.Username),
+			ID:       new(subject),
+			Username: new(profile.Username),
 			Email:    updateEmailPointer(profile.Email),
 			Attributes: map[string][]string{
 				displayNameAttribute: {profile.DisplayName},
@@ -149,8 +149,8 @@ func (a *keycloakIdentityAdmin) SetEnabled(
 ) error {
 	return a.withToken(ctx, func(callCtx context.Context, token string) error {
 		err := a.client.UpdateUser(callCtx, token, a.cfg.Realm, gocloak.User{
-			ID:      stringPointer(subject),
-			Enabled: boolPointer(enabled),
+			ID:      new(subject),
+			Enabled: new(enabled),
 		})
 		return mapIdentityAdminError(err)
 	})
@@ -184,8 +184,8 @@ func (a *keycloakIdentityAdmin) ListIdentities(
 	err := a.withToken(ctx, func(callCtx context.Context, token string) error {
 		for first := 0; ; first += identityListPageSize {
 			users, err := a.client.GetUsers(callCtx, token, a.cfg.Realm, gocloak.GetUsersParams{
-				First: intPointer(first),
-				Max:   intPointer(identityListPageSize),
+				First: new(first),
+				Max:   new(identityListPageSize),
 			})
 			if err != nil {
 				return mapIdentityAdminError(err)
@@ -266,13 +266,9 @@ func mapIdentityAdminError(err error) error {
 	return fmt.Errorf("%w: %v", types.ErrIdentityAdminUnavailable, err)
 }
 
-func stringPointer(value string) *string { return &value }
-func boolPointer(value bool) *bool       { return &value }
-func intPointer(value int) *int          { return &value }
-
 func updateEmailPointer(email *string) *string {
 	if email != nil {
 		return email
 	}
-	return stringPointer("")
+	return new("")
 }
